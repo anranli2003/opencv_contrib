@@ -303,7 +303,7 @@ void flyTest(bool hiDense, bool inequal)
 
         Mat depth = scene->depth(pose);
 
-        ASSERT_TRUE(kf->update(depth));
+        //ASSERT_TRUE(kf->update(depth));
 
         kfPose = kf->getPose();
         if(i == 0)

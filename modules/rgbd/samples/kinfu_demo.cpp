@@ -385,35 +385,35 @@ int main(int argc, char **argv)
             {
                 imshow("depth", cvt8);
 
-                if(!kf->update(frame))
-                {
-                    kf->reset();
-                    std::cout << "reset" << std::endl;
-                }
-#ifdef HAVE_OPENCV_VIZ
-                else
-                {
-                    if(coarse)
-                    {
-                        kf->getCloud(points, normals);
-                        if(!points.empty() && !normals.empty())
-                        {
-                            viz::WCloud cloudWidget(points, viz::Color::white());
-                            viz::WCloudNormals cloudNormals(points, normals, /*level*/1, /*scale*/0.05, viz::Color::gray());
-                            window.showWidget("cloud", cloudWidget);
-                            window.showWidget("normals", cloudNormals);
-                        }
-                    }
+//                 if(!kf->update(frame, semantic))
+//                 {
+//                     kf->reset();
+//                     std::cout << "reset" << std::endl;
+//                 }
+// #ifdef HAVE_OPENCV_VIZ
+//                 else
+//                 {
+//                     if(coarse)
+//                     {
+//                         kf->getCloud(points, normals);
+//                         if(!points.empty() && !normals.empty())
+//                         {
+//                             viz::WCloud cloudWidget(points, viz::Color::white());
+//                             viz::WCloudNormals cloudNormals(points, normals, /*level*/1, /*scale*/0.05, viz::Color::gray());
+//                             window.showWidget("cloud", cloudWidget);
+//                             window.showWidget("normals", cloudNormals);
+//                         }
+//                     }
 
-                    //window.showWidget("worldAxes", viz::WCoordinateSystem());
-                    Vec3d volSize = kf->getParams().voxelSize*kf->getParams().volumeDims;
-                    window.showWidget("cube", viz::WCube(Vec3d::all(0),
-                                                         volSize),
-                                      kf->getParams().volumePose);
-                    window.setViewerPose(kf->getPose());
-                    window.spinOnce(1, true);
-                }
-#endif
+//                     //window.showWidget("worldAxes", viz::WCoordinateSystem());
+//                     Vec3d volSize = kf->getParams().voxelSize*kf->getParams().volumeDims;
+//                     window.showWidget("cube", viz::WCube(Vec3d::all(0),
+//                                                          volSize),
+//                                       kf->getParams().volumePose);
+//                     window.setViewerPose(kf->getPose());
+//                     window.spinOnce(1, true);
+//                 }
+// #endif
 
                 kf->render(rendered);
             }

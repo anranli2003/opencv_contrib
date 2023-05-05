@@ -164,7 +164,7 @@ public:
     /** @brief Gets points of current 3d mesh
 
      The order of points is undefined.
-
+g that I need to come into la
         @param points vector of points which are 4-float vectors
      */
     CV_WRAP virtual void getPoints(OutputArray points) const = 0;
@@ -192,7 +192,7 @@ public:
     @param depth one-channel image which size and depth scale is described in algorithm's parameters
     @return true if succeded to align new frame with current scene, false if opposite
     */
-    CV_WRAP virtual bool update(InputArray depth) = 0;
+    CV_WRAP virtual bool update(InputArray depth, const cv::Mat& _semantic) = 0;
 };
 
 //! @}

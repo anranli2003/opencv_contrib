@@ -7,6 +7,7 @@
 #include "precomp.hpp"
 #include "kinfu_frame.hpp"
 #include "opencl_kernels_rgbd.hpp"
+#include <opencv2/core.hpp>
 
 namespace cv {
 namespace kinfu {
@@ -564,7 +565,68 @@ static bool ocl_buildPyramidPointsNormals(const UMat points, const UMat normals,
 }
 
 #endif
+std::vector<cv::Vec3b> colors = {
+    cv::Vec3b(255, 0, 0),     // red
+    cv::Vec3b(0, 255, 0),     // green
+    cv::Vec3b(0, 0, 255),     // blue
+    cv::Vec3b(255, 255, 0),   // yellow
+    cv::Vec3b(255, 0, 255),   // magenta
+    cv::Vec3b(0, 255, 255),   // cyan
+    cv::Vec3b(128, 0, 0),     // maroon
+    cv::Vec3b(0, 128, 0),     // dark green
+    cv::Vec3b(0, 0, 128),     // navy
+    cv::Vec3b(128, 128, 0),   // olive
+    cv::Vec3b(128, 0, 128),   // purple
+    cv::Vec3b(0, 128, 128),   // teal
+    cv::Vec3b(255, 128, 0),   // orange
+    cv::Vec3b(255, 0, 128),   // pink
+    cv::Vec3b(0, 255, 128),   // light green
+    cv::Vec3b(128, 255, 0),   // lime
+    cv::Vec3b(128, 0, 255),   // violet
+    cv::Vec3b(0, 128, 255),   // sky blue
+    cv::Vec3b(255, 128, 128), // light pink
+    cv::Vec3b(128, 255, 128), // light greenish
+    cv::Vec3b(128, 128, 255), // light blue
+    cv::Vec3b(255, 255, 128), // light yellow
+    cv::Vec3b(255, 128, 255), // light purple
+    cv::Vec3b(128, 255, 255), // light cyan
+    cv::Vec3b(192, 0, 0),     // dark red
+    cv::Vec3b(0, 192, 0),     // medium green
+    cv::Vec3b(0, 0, 192),     // dark blue
+    cv::Vec3b(192, 192, 0),   // dark yellow
+    cv::Vec3b(192, 0, 192),   // dark magenta
+    cv::Vec3b(0, 192, 192),   // dark cyan
+    cv::Vec3b(128, 64, 0),    // brown
+    cv::Vec3b(64, 128, 0),    // olive green
+    cv::Vec3b(0, 64, 128),    // dark indigo
+    cv::Vec3b(128, 64, 128),  // medium purple
+    cv::Vec3b(64, 128, 128),  // medium aqua
+    cv::Vec3b(128, 128, 64),  // khaki
+    cv::Vec3b(192, 64, 0),    // dark orange
+    cv::Vec3b(160, 10, 0),
+    cv::Vec3b(100, 0, 8),   
+    cv::Vec3b(0, 255, 255),   
+    cv::Vec3b(128, 100, 0),     
+    cv::Vec3b(0, 70, 90),     
+    cv::Vec3b(70, 0, 250),     
+    cv::Vec3b(130, 0, 130),   
+    cv::Vec3b(30, 30, 30),   
+    cv::Vec3b(210, 170, 100),   
+    cv::Vec3b(80, 80, 255),   
+    cv::Vec3b(5, 0, 5),   
+    cv::Vec3b(165, 80, 92),   
+    cv::Vec3b(0, 60, 0),   
+    cv::Vec3b(30, 0, 109),   
+    cv::Vec3b(99, 199, 255),   
+    cv::Vec3b(177, 177, 177), 
+    cv::Vec3b(11, 255, 30), 
+    cv::Vec3b(133, 31, 63), 
+    cv::Vec3b(42, 82, 100), 
+    cv::Vec3b(33, 234, 11), 
+    cv::Vec3b(222, 222, 5), 
+    cv::Vec3b(1, 128, 200)
 
+};
 
 void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, Affine3f lightPose)
 {
@@ -586,10 +648,30 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 
     Mat_<Vec4b> img = image.getMat();
 
-    RenderInvoker ri(points, normals, img, lightPose, sz);
-    Range range(0, sz.height);
-    const int nstripes = -1;
-    parallel_for_(range, ri, nstripes);
+    Vec3f lightDir = lightPose.rotation() * Vec3f(0, 0, 1);  // direction of the light source
+
+    for (int y = 0; y < sz.height; ++y) {
+        for (int x = 0; x < sz.width; ++x) {
+            Vec3f n = normals.at<Vec3f>(y, x);
+            float intensity = std::max(0.0f, n.dot(lightDir));  // compute intensity using dot product
+            img(y, x) = Vec4b(intensity * 255, intensity * 255, intensity * 255, 255);  // set color based on intensity
+        }
+    }
+
+    // for (int y = 0; y < sz.height; ++y) {
+    //     for (int x = 0; x < sz.width; ++x) {
+    //         Vec3f n = normals.at<Vec3f>(y, x);
+    //         float intensity = std::max(0.0f, n.dot(lightDir));  // compute intensity using dot product
+
+    //         Vec3b color = colors[label];
+    //         img(y, x) = Vec4b(color[0], color[1], color[2], 255);  // set color based on semantic label
+    //     }
+    // }
+
+    // RenderInvoker ri(points, normals, img, lightPose, sz);
+    // Range range(0, sz.height);
+    // const int nstripes = -1;
+    // parallel_for_(range, ri, nstripes);
 }
 
 

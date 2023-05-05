@@ -102,9 +102,10 @@ public:
 
     const Affine3f getPose() const CV_OVERRIDE;
 
-    bool update(InputArray depth) CV_OVERRIDE;
 
-    bool updateT(const T& depth);
+    bool update(InputArray depth, const cv::Mat& _semantic) override;
+
+    bool updateT(const T& depth, const cv::Mat& _semantic);
 
 private:
     Params params;
@@ -157,7 +158,7 @@ const Affine3f KinFuImpl<T>::getPose() const
 
 
 template<>
-bool KinFuImpl<Mat>::update(InputArray _depth)
+bool KinFuImpl<Mat>::update(InputArray _depth, const cv::Mat& _semantic)
 {
     CV_Assert(!_depth.empty() && _depth.size() == params.frameSize);
 
@@ -165,17 +166,17 @@ bool KinFuImpl<Mat>::update(InputArray _depth)
     if(_depth.isUMat())
     {
         _depth.copyTo(depth);
-        return updateT(depth);
+        return updateT(depth,_semantic);
     }
     else
     {
-        return updateT(_depth.getMat());
+        return updateT(_depth.getMat(), _semantic);
     }
 }
 
 
 template<>
-bool KinFuImpl<UMat>::update(InputArray _depth)
+bool KinFuImpl<UMat>::update(InputArray _depth, const cv::Mat& _semantic)
 {
     CV_Assert(!_depth.empty() && _depth.size() == params.frameSize);
 
@@ -183,25 +184,30 @@ bool KinFuImpl<UMat>::update(InputArray _depth)
     if(!_depth.isUMat())
     {
         _depth.copyTo(depth);
-        return updateT(depth);
+        return updateT(depth, _semantic); 
     }
     else
     {
-        return updateT(_depth.getUMat());
+        return updateT(_depth.getUMat(), _semantic);
     }
 }
 
 
 template< typename T >
-bool KinFuImpl<T>::updateT(const T& _depth)
+bool KinFuImpl<T>::updateT(const T& _depth, const cv::Mat& _semantic)
 {
     CV_TRACE_FUNCTION();
+
 
     T depth;
     if(_depth.type() != DEPTH_TYPE)
         _depth.convertTo(depth, DEPTH_TYPE);
     else
         depth = _depth;
+
+
+    // Get camera pose
+    Matx44f cameraPose = pose.matrix;
 
     std::vector<T> newPoints, newNormals;
     makeFrameFromDepth(depth, newPoints, newNormals, params.intr,
@@ -214,7 +220,7 @@ bool KinFuImpl<T>::updateT(const T& _depth)
     if(frameCounter == 0)
     {
         // use depth instead of distance
-        volume->integrate(depth, params.depthFactor, pose, params.intr);
+        volume->integrate(depth,_semantic, params.depthFactor, pose, params.intr);
 
         pyrPoints  = newPoints;
         pyrNormals = newNormals;
@@ -234,7 +240,7 @@ bool KinFuImpl<T>::updateT(const T& _depth)
         if((rnorm + tnorm)/2 >= params.tsdf_min_camera_movement)
         {
             // use depth instead of distance
-            volume->integrate(depth, params.depthFactor, pose, params.intr);
+            volume->integrate(depth, _semantic, params.depthFactor, pose, params.intr);
         }
 
         T& points  = pyrPoints [0];
@@ -244,6 +250,7 @@ bool KinFuImpl<T>::updateT(const T& _depth)
         buildPyramidPointsNormals(points, normals, pyrPoints, pyrNormals,
                                   params.pyramidLevels);
     }
+
 
     frameCounter++;
     return true;
@@ -257,6 +264,15 @@ void KinFuImpl<T>::render(OutputArray image, const Matx44f& _cameraPose) const
 
     Affine3f cameraPose(_cameraPose);
 
+    // int label = 0;
+    // float max_weight = -1.0f;
+    // for (int i = 0; i < semantic_weights.size(); i++) {
+    //     if (semantic_weights[i] > max_weight) {
+    //         max_weight = semantic_weights[i];
+    //         label = i;
+    //     }
+    // }
+
     const Affine3f id = Affine3f::Identity();
     if((cameraPose.rotation() == pose.rotation() && cameraPose.translation() == pose.translation()) ||
        (cameraPose.rotation() == id.rotation()   && cameraPose.translation() == id.translation()))
@@ -264,7 +280,8 @@ void KinFuImpl<T>::render(OutputArray image, const Matx44f& _cameraPose) const
         renderPointsNormals(pyrPoints[0], pyrNormals[0], image, params.lightPose);
     }
     else
-    {
+    {   
+        printf("This happened");
         T points, normals;
         volume->raycast(cameraPose, params.intr, params.frameSize, points, normals);
         renderPointsNormals(points, normals, image, params.lightPose);
@@ -275,6 +292,7 @@ void KinFuImpl<T>::render(OutputArray image, const Matx44f& _cameraPose) const
 template< typename T >
 void KinFuImpl<T>::getCloud(OutputArray p, OutputArray n) const
 {
+    printf("\n 1 \n");
     volume->fetchPointsNormals(p, n);
 }
 
