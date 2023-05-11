@@ -103,9 +103,9 @@ public:
     const Affine3f getPose() const CV_OVERRIDE;
 
 
-    bool update(InputArray depth, const cv::Mat& _semantic) override;
+    bool update(InputArray depth, const Semantic& _semantic) override;
 
-    bool updateT(const T& depth, const cv::Mat& _semantic);
+    bool updateT(const T& depth, const Semantic& _semantic);
 
 private:
     Params params;
@@ -158,7 +158,7 @@ const Affine3f KinFuImpl<T>::getPose() const
 
 
 template<>
-bool KinFuImpl<Mat>::update(InputArray _depth, const cv::Mat& _semantic)
+bool KinFuImpl<Mat>::update(InputArray _depth, const Semantic& _semantic)
 {
     CV_Assert(!_depth.empty() && _depth.size() == params.frameSize);
 
@@ -176,7 +176,7 @@ bool KinFuImpl<Mat>::update(InputArray _depth, const cv::Mat& _semantic)
 
 
 template<>
-bool KinFuImpl<UMat>::update(InputArray _depth, const cv::Mat& _semantic)
+bool KinFuImpl<UMat>::update(InputArray _depth, const Semantic& _semantic)
 {
     CV_Assert(!_depth.empty() && _depth.size() == params.frameSize);
 
@@ -194,7 +194,7 @@ bool KinFuImpl<UMat>::update(InputArray _depth, const cv::Mat& _semantic)
 
 
 template< typename T >
-bool KinFuImpl<T>::updateT(const T& _depth, const cv::Mat& _semantic)
+bool KinFuImpl<T>::updateT(const T& _depth, const Semantic& _semantic)
 {
     CV_TRACE_FUNCTION();
 
@@ -263,28 +263,21 @@ void KinFuImpl<T>::render(OutputArray image, const Matx44f& _cameraPose) const
     CV_TRACE_FUNCTION();
 
     Affine3f cameraPose(_cameraPose);
+    int label = 1;
 
-    // int label = 0;
-    // float max_weight = -1.0f;
-    // for (int i = 0; i < semantic_weights.size(); i++) {
-    //     if (semantic_weights[i] > max_weight) {
-    //         max_weight = semantic_weights[i];
-    //         label = i;
-    //     }
-    // }
 
     const Affine3f id = Affine3f::Identity();
     if((cameraPose.rotation() == pose.rotation() && cameraPose.translation() == pose.translation()) ||
        (cameraPose.rotation() == id.rotation()   && cameraPose.translation() == id.translation()))
     {
-        renderPointsNormals(pyrPoints[0], pyrNormals[0], image, params.lightPose);
+        renderPointsNormals(pyrPoints[0], pyrNormals[0], image, params.lightPose, label); // label
     }
     else
     {   
         printf("This happened");
         T points, normals;
         volume->raycast(cameraPose, params.intr, params.frameSize, points, normals);
-        renderPointsNormals(points, normals, image, params.lightPose);
+        renderPointsNormals(points, normals, image, params.lightPose, label); // label;
     }
 }
 

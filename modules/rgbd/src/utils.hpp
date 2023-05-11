@@ -49,6 +49,7 @@ namespace kinfu {
 #define USE_INTRINSICS CV_SIMD128
 
 typedef float depthType;
+typedef int maskType;
 
 const float qnan = std::numeric_limits<float>::quiet_NaN();
 const cv::Vec3f nan3(qnan, qnan, qnan);

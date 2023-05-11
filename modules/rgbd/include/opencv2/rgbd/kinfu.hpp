@@ -14,6 +14,7 @@ namespace cv {
 namespace kinfu {
 //! @addtogroup kinect_fusion
 //! @{
+typedef cv::Mat_< uchar > Semantic;
 
 struct CV_EXPORTS_W Params
 {
@@ -192,7 +193,7 @@ g that I need to come into la
     @param depth one-channel image which size and depth scale is described in algorithm's parameters
     @return true if succeded to align new frame with current scene, false if opposite
     */
-    CV_WRAP virtual bool update(InputArray depth, const cv::Mat& _semantic) = 0;
+    CV_WRAP virtual bool update(InputArray depth, const Semantic& _semantic) = 0;
 };
 
 //! @}

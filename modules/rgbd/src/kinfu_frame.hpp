@@ -80,7 +80,7 @@ typedef Points Normals;
 
 typedef cv::Mat_< depthType > Depth;
 
-void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, cv::Affine3f lightPose);
+void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, cv::Affine3f lightPose, int max_index); //int max_index
 void makeFrameFromDepth(InputArray depth, OutputArray pyrPoints, OutputArray pyrNormals,
                         const Intr intr, int levels, float depthFactor,
                         float sigmaDepth, float sigmaSpatial, int kernelSize);
