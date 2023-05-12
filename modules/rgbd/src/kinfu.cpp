@@ -14,7 +14,7 @@ namespace kinfu {
 
 Ptr<Params> Params::defaultParams()
 {
-    Params p;
+    Params p; 
 
     p.frameSize = Size(640, 480);
 

@@ -369,7 +369,7 @@ struct IntegrateInvoker : ParallelLoopBody
                         //get the value from the mask at ip mask.getvalueatpoint(ip)
                         m = semantic.at<uchar>(ip1.val[1], ip1.val[0]);
 
-                        std::cout << m << std::endl;
+                        //std::cout << "outputting m : " << std::endl << m << std::endl;
                     }
 
                     // norm(camPixVec) produces double which is too slow
@@ -400,14 +400,13 @@ struct IntegrateInvoker : ParallelLoopBody
                         //update semantic vector
                         // for(int i=0; i<57 ; ++i){
                         // voxel.semantic_weights[i] += 1;
-                        // voxel.semantic_weights[m] += 1;
+                         voxel.semantic_weights[m] += 1;
                         // }
 
-                        // std::cout << "element in semantic_weights array: " << std::endl;
-                        // for(int i = 0 ; i < 57 ; ++i){
-                        //     std::cout << i+1 << "th element: " << voxel.semantic_weights[i] << std::endl;
-
-                        // }
+                        std::cout << "element in semantic_weights array: " << std::endl;
+                        for(int i = 0 ; i < 57 ; ++i){
+                            std::cout << i+1 << "th element: " << voxel.semantic_weights[i] << std::endl;
+                        }
 
                         
 
