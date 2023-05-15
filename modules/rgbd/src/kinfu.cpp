@@ -263,8 +263,8 @@ void KinFuImpl<T>::render(OutputArray image, const Matx44f& _cameraPose) const
     CV_TRACE_FUNCTION();
 
     Affine3f cameraPose(_cameraPose);
-    int label = 1;
-
+  
+    int label = 57;
 
     const Affine3f id = Affine3f::Identity();
     if((cameraPose.rotation() == pose.rotation() && cameraPose.translation() == pose.translation()) ||

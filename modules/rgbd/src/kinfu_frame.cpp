@@ -9,7 +9,7 @@
 #include "opencl_kernels_rgbd.hpp"
 #include <opencv2/core.hpp>
 
-namespace cv {
+namespace cv { 
 namespace kinfu {
 
 static void computePointsNormals(const cv::kinfu::Intr, float depthFactor, const Depth, Points, Normals );
@@ -72,7 +72,9 @@ struct RenderInvoker : ParallelLoopBody
 
                 if(isNaN(p))
                 {
-                    color = Vec4b(0, 32, 0, 0);
+                    color = Vec4b(0, 18, 0, 0);
+//color = Vec4b(0, 18, 0, 0);
+
                 }
                 else
                 {
@@ -88,80 +90,80 @@ struct RenderInvoker : ParallelLoopBody
                     Point3f r = normalize(Vec3f(2.f*n*n.dot(l) - l));
 
                     std::vector<cv::Vec3b> colors = {
-                        cv::Vec3b(255, 0, 0),     // red
-                        cv::Vec3b(0, 255, 0),     // green
-                        cv::Vec3b(0, 0, 255),     // blue
-                        cv::Vec3b(255, 255, 0),   // yellow
-                        cv::Vec3b(255, 0, 255),   // magenta
-                        cv::Vec3b(0, 255, 255),   // cyan
-                        cv::Vec3b(128, 0, 0),     // maroon
-                        cv::Vec3b(0, 128, 0),     // dark green
-                        cv::Vec3b(0, 0, 128),     // navy
-                        cv::Vec3b(128, 128, 0),   // olive
-                        cv::Vec3b(128, 0, 128),   // purple
-                        cv::Vec3b(0, 128, 128),   // teal
-                        cv::Vec3b(255, 128, 0),   // orange
-                        cv::Vec3b(255, 0, 128),   // pink
-                        cv::Vec3b(0, 255, 128),   // light green
-                        cv::Vec3b(128, 255, 0),   // lime
-                        cv::Vec3b(128, 0, 255),   // violet
-                        cv::Vec3b(0, 128, 255),   // sky blue
-                        cv::Vec3b(255, 128, 128), // light pink
-                        cv::Vec3b(128, 255, 128), // light greenish
-                        cv::Vec3b(128, 128, 255), // light blue
-                        cv::Vec3b(255, 255, 128), // light yellow
-                        cv::Vec3b(255, 128, 255), // light purple
-                        cv::Vec3b(128, 255, 255), // light cyan
-                        cv::Vec3b(192, 0, 0),     // dark red
-                        cv::Vec3b(0, 192, 0),     // medium green
-                        cv::Vec3b(0, 0, 192),     // dark blue
-                        cv::Vec3b(192, 192, 0),   // dark yellow
-                        cv::Vec3b(192, 0, 192),   // dark magenta
-                        cv::Vec3b(0, 192, 192),   // dark cyan
-                        cv::Vec3b(128, 64, 0),    // brown
-                        cv::Vec3b(64, 128, 0),    // olive green
-                        cv::Vec3b(0, 64, 128),    // dark indigo
-                        cv::Vec3b(128, 64, 128),  // medium purple
-                        cv::Vec3b(64, 128, 128),  // medium aqua
-                        cv::Vec3b(128, 128, 64),  // khaki
-                        cv::Vec3b(192, 64, 0),    // dark orange
-                        cv::Vec3b(160, 10, 0),
-                        cv::Vec3b(100, 0, 8),   
-                        cv::Vec3b(0, 255, 255),   
-                        cv::Vec3b(128, 100, 0),     
-                        cv::Vec3b(0, 70, 90),     
-                        cv::Vec3b(70, 0, 250),     
-                        cv::Vec3b(130, 0, 130),   
-                        cv::Vec3b(30, 30, 30),   
-                        cv::Vec3b(210, 170, 100),   
-                        cv::Vec3b(80, 80, 255),   
-                        cv::Vec3b(5, 0, 5),   
-                        cv::Vec3b(165, 80, 92),   
-                        cv::Vec3b(0, 60, 0),   
-                        cv::Vec3b(30, 0, 109),   
-                        cv::Vec3b(99, 199, 255),   
-                        cv::Vec3b(177, 177, 177), 
-                        cv::Vec3b(11, 255, 30), 
-                        cv::Vec3b(133, 31, 63), 
-                        cv::Vec3b(42, 82, 100), 
-                        cv::Vec3b(33, 234, 11), 
-                        cv::Vec3b(222, 222, 5), 
-                        cv::Vec3b(1, 128, 200)
-
+                        cv::Vec3b(255, 0, 0),     // 0 red
+                        cv::Vec3b(0, 255, 0),     // 1 green
+                        cv::Vec3b(0, 0, 255),     // 2 blue
+                        cv::Vec3b(255, 255, 0),   // 3 yellow
+                        cv::Vec3b(255, 0, 255),   // 4 magenta
+                        cv::Vec3b(0, 255, 255),   // 5 cyan
+                        cv::Vec3b(128, 0, 0),     // 6 maroon
+                        cv::Vec3b(0, 128, 0),     // 7 dark green
+                        cv::Vec3b(0, 0, 128),     // 8 navy
+                        cv::Vec3b(128, 128, 0),   // 9 olive
+                        cv::Vec3b(128, 0, 128),   // 10 purple
+                        cv::Vec3b(0, 128, 128),   // 11 teal
+                        cv::Vec3b(255, 128, 0),   // 12 orange
+                        cv::Vec3b(255, 0, 128),   // 13 pink
+                        cv::Vec3b(0, 255, 128),   // 14 light green
+                        cv::Vec3b(128, 255, 0),   // 15 lime
+                        cv::Vec3b(128, 0, 255),   // 16 violet
+                        cv::Vec3b(0, 128, 255),   // 17 sky blue
+                        cv::Vec3b(255, 128, 128), // 18 light pink
+                        cv::Vec3b(128, 255, 128), // 19 light greenish
+                        cv::Vec3b(128, 128, 255), // 20 light blue
+                        cv::Vec3b(255, 255, 128), // 21 light yellow
+                        cv::Vec3b(255, 128, 255), // 22 light purple
+                        cv::Vec3b(128, 255, 255), // 23 light cyan
+                        cv::Vec3b(192, 0, 0),     // 24 dark red
+                        cv::Vec3b(0, 192, 0),     // 25 medium green
+                        cv::Vec3b(0, 0, 192),     // 26 dark blue
+                        cv::Vec3b(192, 192, 0),   // 27 dark yellow
+                        cv::Vec3b(192, 0, 192),   // 28 dark magenta
+                        cv::Vec3b(0, 192, 192),   // 29 dark cyan
+                        cv::Vec3b(128, 64, 0),    // 30 brown
+                        cv::Vec3b(64, 128, 0),    // 31 olive green
+                        cv::Vec3b(0, 64, 128),    // 32 dark indigo
+                        cv::Vec3b(128, 64, 128),  // 33 medium purple
+                        cv::Vec3b(64, 128, 128),  // 34 medium aqua
+                        cv::Vec3b(128, 128, 64),  // 35 khaki
+                        cv::Vec3b(192, 64, 0),    // 36 dark orange
+                        cv::Vec3b(255, 255, 255),       // 37
+                        cv::Vec3b(160, 10, 0),    // 38
+                        cv::Vec3b(100, 0, 8),     // 39
+                        cv::Vec3b(0, 255, 255),   // 40
+                        cv::Vec3b(128, 100, 0),   // 41  
+                        cv::Vec3b(0, 70, 90),     // 42
+                        cv::Vec3b(70, 0, 250),    // 43 
+                        cv::Vec3b(130, 0, 130),   // 44
+                        cv::Vec3b(30, 30, 30),    // 45
+                        cv::Vec3b(210, 170, 100), // 46  
+                        cv::Vec3b(80, 80, 255),   // 47
+                        cv::Vec3b(5, 0, 5),       // 48
+                        cv::Vec3b(165, 80, 92),   // 49
+                        cv::Vec3b(0, 60, 0),      // 50
+                        cv::Vec3b(30, 0, 109),    // 51
+                        cv::Vec3b(99, 199, 255),  // 52 
+                        cv::Vec3b(177, 177, 177), // 53
+                        cv::Vec3b(11, 255, 30),   // 54
+                        cv::Vec3b(133, 31, 63),   // 55
+                        cv::Vec3b(42, 82, 100),   // 56
+                        cv::Vec3b(0, 0, 255), //57
                     };
 
                     // Use a lookup table to get the color for the semantic class
-                    int classId = max_index;
-                    const Vec3b& colorVec = colors[classId];
+                    const Vec3b& colorVec = colors[max_index];
 
                     const float Ax = colorVec[0]/255.f;   //ambient color
                     const float Dx = colorVec[1]/255.f;   //diffuse color
                     const float Sx = colorVec[2]/255.f;   //specular color
 
-                    uchar ix = (uchar)((Ax*Ka*Dx + Lx*Kd*Dx*max(0.f, n.dot(l)) +
-                                        Lx*Ks*Sx*specPow<sp>(max(0.f, r.dot(v))))*255.f);
+                     uchar ix = (uchar)((Ax*Ka*Dx + Lx*Kd*Dx*max(0.f, n.dot(l)) +
+                                         Lx*Ks*Sx*specPow<sp>(max(0.f, r.dot(v))))*255.f);
 
-                    color = Vec4b(ix, ix, ix, 0);
+                    // color = Vec4b(ix, ix, ix, 0);
+                    color = Vec4b(ix*colorVec[0],ix*colorVec[1], ix*colorVec[2],0);
+
+                    //color = Vec4b(colorVec[0],colorVec[1], colorVec[2],0);
                 }
 
                 imgRow[x] = color;
@@ -207,7 +209,9 @@ struct RenderInvoker : ParallelLoopBody
 
 //                 if(isNaN(p))
 //                 {
-//                     color = Vec4b(0, 32, 0, 0);
+//                     color = Vec4b(255, 128, 128, 0);
+//                                         //color = Vec4b(0, 32, 0, 0);
+
 //                 }
 //                 else
 //                 {
@@ -697,7 +701,7 @@ static bool ocl_buildPyramidPointsNormals(const UMat points, const UMat normals,
         if(!pyrDownPointsNormalsGpu(p1, n1, p0, n0))
             return false;
     }
-
+ 
     return true;
 }
 
@@ -713,26 +717,15 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
     Size sz = _points.size();
     image.create(sz, CV_8UC4);
 
-    CV_OCL_RUN(_points.isUMat() && _normals.isUMat() && image.isUMat(),
-               ocl_renderPointsNormals(_points.getUMat(),
-                                       _normals.getUMat(),
-                                       image.getUMat(), lightPose))
+    // CV_OCL_RUN(_points.isUMat() && _normals.isUMat() && image.isUMat(),
+    //            ocl_renderPointsNormals(_points.getUMat(),
+    //                                    _normals.getUMat(),
+    //                                    image.getUMat(), lightPose))
 
     Points  points  = _points.getMat();
     Normals normals = _normals.getMat();
 
     Mat_<Vec4b> img = image.getMat();
-
-    Vec3f lightDir = lightPose.rotation() * Vec3f(0, 0, 1);  // direction of the light source
-
-    for (int y = 0; y < sz.height; ++y) {
-        for (int x = 0; x < sz.width; ++x) {
-            Vec3f n = normals.at<Vec3f>(y, x);
-            float intensity = std::max(0.0f, n.dot(lightDir));  // compute intensity using dot product
-            img(y, x) = Vec4b(intensity * 255, intensity * 255, intensity * 255, 255);  // set color based on intensity
-        }
-    }
-
 
     RenderInvoker ri(points, normals, img, lightPose, sz, max_index); // max_index
     Range range(0, sz.height);
@@ -740,15 +733,6 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
     parallel_for_(range, ri, nstripes);
 }
 
-    // for (int y = 0; y < sz.height; ++y) {
-    //     for (int x = 0; x < sz.width; ++x) {
-    //         Vec3f n = normals.at<Vec3f>(y, x);
-    //         float intensity = std::max(0.0f, n.dot(lightDir));  // compute intensity using dot product
-
-    //         Vec3b color = colors[label];
-    //         img(y, x) = Vec4b(color[0], color[1], color[2], 255);  // set color based on semantic label
-    //     }
-    // }
 
 void makeFrameFromDepth(InputArray _depth,
                         OutputArray pyrPoints, OutputArray pyrNormals,

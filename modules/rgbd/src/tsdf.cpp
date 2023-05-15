@@ -398,78 +398,74 @@ struct IntegrateInvoker : ParallelLoopBody
 
 
                         //update semantic vector
-                        // for(int i=0; i<57 ; ++i){
-                        // voxel.semantic_weights[i] += 1;
-                         voxel.semantic_weights[m] += 1;
-                        // }
+
+                        voxel.semantic_weights[m] += 1;
 
                         std::cout << "element in semantic_weights array: " << std::endl;
                         for(int i = 0 ; i < 57 ; ++i){
                             std::cout << i+1 << "th element: " << voxel.semantic_weights[i] << std::endl;
                         }
 
-                        
-
                     }
                 }
             }
         }
         // Gaussian Convolution
-        //printf("Doing Gaussian Convolution...");
-        // for(int x = range.start + 1; x < range.end - 1; x++){
-        //     Voxel* volDataX = volDataStart + x*volume.volDims[0];
-        //     Voxel* volDataX_left = volDataStart + (x-1)*volume.volDims[0];
-        //     Voxel* volDataX_right = volDataStart + (x+1)*volume.volDims[0];
-        //     for(int y = 1; y < volume.volResolution.y - 1; y++){
-        //         Voxel* volDataY = volDataX+y*volume.volDims[1];
-        //         Voxel* volDataY_left = volDataX_left+y*volume.volDims[1];
-        //         Voxel* volDataY_right = volDataX_right+y*volume.volDims[1];
-        //         Voxel* volDataY_above = volDataX+(y+1)*volume.volDims[1];
-        //         Voxel* volDataY_below = volDataX+(y-1)*volume.volDims[1];
-        //         Voxel* volDataY_above_left = volDataX_left+(y+1)*volume.volDims[1];
-        //         Voxel* volDataY_below_left = volDataX_left+(y-1)*volume.volDims[1];
-        //         Voxel* volDataY_above_right = volDataX_right+(y+1)*volume.volDims[1];
-        //         Voxel* volDataY_below_right = volDataX_right+(y-1)*volume.volDims[1];
-        //         for(int z = 1; z < volume.volResolution.z - 1; z++){
-        //             Voxel& voxel = volDataY[z*volume.volDims[2]];
-        //             Voxel& voxel_behind = volDataY[(z+1)*volume.volDims[2]];
-        //             Voxel& voxel_front = volDataY[(z-1)*volume.volDims[2]];
-        //             Voxel& voxel_left = volDataY_left[z*volume.volDims[2]];
-        //             Voxel& voxel_right = volDataY_right[z*volume.volDims[2]];
-        //             Voxel& voxel_behind_left = volDataY_left[(z+1)*volume.volDims[2]];
-        //             Voxel& voxel_behind_right = volDataY_right[(z+1)*volume.volDims[2]];
-        //             Voxel& voxel_front_left = volDataY_left[(z-1)*volume.volDims[2]];  
-        //             Voxel& voxel_front_right = volDataY_right[(z-1)*volume.volDims[2]];
+        printf("Doing Gaussian Convolution...");
+        for(int x = range.start + 1; x < range.end - 1; x++){
+            Voxel* volDataX = volDataStart + x*volume.volDims[0];
+            Voxel* volDataX_left = volDataStart + (x-1)*volume.volDims[0];
+            Voxel* volDataX_right = volDataStart + (x+1)*volume.volDims[0];
+            for(int y = 1; y < volume.volResolution.y - 1; y++){
+                Voxel* volDataY = volDataX+y*volume.volDims[1];
+                Voxel* volDataY_left = volDataX_left+y*volume.volDims[1];
+                Voxel* volDataY_right = volDataX_right+y*volume.volDims[1];
+                Voxel* volDataY_above = volDataX+(y+1)*volume.volDims[1];
+                Voxel* volDataY_below = volDataX+(y-1)*volume.volDims[1];
+                Voxel* volDataY_above_left = volDataX_left+(y+1)*volume.volDims[1];
+                Voxel* volDataY_below_left = volDataX_left+(y-1)*volume.volDims[1];
+                Voxel* volDataY_above_right = volDataX_right+(y+1)*volume.volDims[1];
+                Voxel* volDataY_below_right = volDataX_right+(y-1)*volume.volDims[1];
+                for(int z = 1; z < volume.volResolution.z - 1; z++){
+                    Voxel& voxel = volDataY[z*volume.volDims[2]];
+                    Voxel& voxel_behind = volDataY[(z+1)*volume.volDims[2]];
+                    Voxel& voxel_front = volDataY[(z-1)*volume.volDims[2]];
+                    Voxel& voxel_left = volDataY_left[z*volume.volDims[2]];
+                    Voxel& voxel_right = volDataY_right[z*volume.volDims[2]];
+                    Voxel& voxel_behind_left = volDataY_left[(z+1)*volume.volDims[2]];
+                    Voxel& voxel_behind_right = volDataY_right[(z+1)*volume.volDims[2]];
+                    Voxel& voxel_front_left = volDataY_left[(z-1)*volume.volDims[2]];  
+                    Voxel& voxel_front_right = volDataY_right[(z-1)*volume.volDims[2]];
 
-        //             Voxel& voxel_above = volDataY_above[z*volume.volDims[2]];
-        //             Voxel& voxel_above_left = volDataY_above_left[z*volume.volDims[2]];
-        //             Voxel& voxel_above_right = volDataY_above_right[z*volume.volDims[2]];
-        //             Voxel& voxel_behind_above = volDataY_above[(z+1)*volume.volDims[2]];
-        //             Voxel& voxel_front_above = volDataY_above[(z-1)*volume.volDims[2]];
-        //             Voxel& voxel_behind_above_left = volDataY_above_left[(z+1)*volume.volDims[2]];
-        //             Voxel& voxel_front_above_left = volDataY_above_left[(z-1)*volume.volDims[2]];
-        //             Voxel& voxel_behind_above_right = volDataY_above_right[(z+1)*volume.volDims[2]];
-        //             Voxel& voxel_front_above_right = volDataY_above_right[(z-1)*volume.volDims[2]];
+                    Voxel& voxel_above = volDataY_above[z*volume.volDims[2]];
+                    Voxel& voxel_above_left = volDataY_above_left[z*volume.volDims[2]];
+                    Voxel& voxel_above_right = volDataY_above_right[z*volume.volDims[2]];
+                    Voxel& voxel_behind_above = volDataY_above[(z+1)*volume.volDims[2]];
+                    Voxel& voxel_front_above = volDataY_above[(z-1)*volume.volDims[2]];
+                    Voxel& voxel_behind_above_left = volDataY_above_left[(z+1)*volume.volDims[2]];
+                    Voxel& voxel_front_above_left = volDataY_above_left[(z-1)*volume.volDims[2]];
+                    Voxel& voxel_behind_above_right = volDataY_above_right[(z+1)*volume.volDims[2]];
+                    Voxel& voxel_front_above_right = volDataY_above_right[(z-1)*volume.volDims[2]];
 
-        //             Voxel& voxel_below = volDataY_below[z*volume.volDims[2]];
-        //             Voxel& voxel_below_left = volDataY_below_left[z*volume.volDims[2]];
-        //             Voxel& voxel_below_right = volDataY_below_right[z*volume.volDims[2]];
-        //             Voxel& voxel_behind_below = volDataY_below[(z+1)*volume.volDims[2]];
-        //             Voxel& voxel_front_below = volDataY_below[(z-1)*volume.volDims[2]];
-        //             Voxel& voxel_behind_below_left = volDataY_below_left[(z+1)*volume.volDims[2]];
-        //             Voxel& voxel_front_below_left = volDataY_below_left[(z-1)*volume.volDims[2]];
-        //             Voxel& voxel_behind_below_right = volDataY_below_right[(z+1)*volume.volDims[2]];
-        //             Voxel& voxel_front_below_right = volDataY_below_right[(z-1)*volume.volDims[2]];
+                    Voxel& voxel_below = volDataY_below[z*volume.volDims[2]];
+                    Voxel& voxel_below_left = volDataY_below_left[z*volume.volDims[2]];
+                    Voxel& voxel_below_right = volDataY_below_right[z*volume.volDims[2]];
+                    Voxel& voxel_behind_below = volDataY_below[(z+1)*volume.volDims[2]];
+                    Voxel& voxel_front_below = volDataY_below[(z-1)*volume.volDims[2]];
+                    Voxel& voxel_behind_below_left = volDataY_below_left[(z+1)*volume.volDims[2]];
+                    Voxel& voxel_front_below_left = volDataY_below_left[(z-1)*volume.volDims[2]];
+                    Voxel& voxel_behind_below_right = volDataY_below_right[(z+1)*volume.volDims[2]];
+                    Voxel& voxel_front_below_right = volDataY_below_right[(z-1)*volume.volDims[2]];
 
-                    // volumeType& value = voxel.v;
-                    // for (int i = 0; i < K; ++i){
-                    //     voxel.semantic_weights[i] = 0.09226132*voxel.semantic_weights[i] + 0.05595932*(voxel_left.semantic_weights[i] + voxel_right.semantic_weights[i] + voxel_above.semantic_weights[i] + voxel_below.semantic_weights[i] + voxel_front.semantic_weights[i] + voxel_behind.semantic_weights[i]) + 0.03394104*(voxel_above_left.semantic_weights[i] + voxel_above_right.semantic_weights[i] + voxel_below_left.semantic_weights[i] + voxel_below_right.semantic_weights[i] + voxel_front_left.semantic_weights[i] + voxel_front_right.semantic_weights[i] + voxel_behind_left.semantic_weights[i] + voxel_behind_right.semantic_weights[i] + voxel_front_above.semantic_weights[i] + voxel_front_below.semantic_weights[i] + voxel_behind_above.semantic_weights[i] + voxel_behind_below.semantic_weights[i]) + 0.02058628*(voxel_front_above_left.semantic_weights[i] + voxel_behind_above_left.semantic_weights[i] + voxel_behind_above_right.semantic_weights[i] + voxel_front_above_right.semantic_weights[i] + voxel_front_below_left.semantic_weights[i] + voxel_behind_below_left.semantic_weights[i] + voxel_behind_below_right.semantic_weights[i] + voxel_front_below_right.semantic_weights[i]);
-                    // }
-                    // value = 0.09226132*value + 0.05595932*(voxel_left.v + voxel_right.v + voxel_above.v + voxel_below.v + voxel_front.v + voxel_behind.v) + 0.03394104*(voxel_above_left.v + voxel_above_right.v + voxel_below_left.v + voxel_below_right.v + voxel_front_left.v + voxel_front_right.v + voxel_behind_left.v + voxel_behind_right.v + voxel_front_above.v + voxel_front_below.v + voxel_behind_above.v + voxel_behind_below.v) + 0.02058628*(voxel_front_above_left.v + voxel_behind_above_left.v + voxel_behind_above_right.v + voxel_front_above_right.v + voxel_front_below_left.v + voxel_behind_below_left.v + voxel_behind_below_right.v + voxel_front_below_right.v);
+                    volumeType& value = voxel.v;
+                    for (int i = 0; i < K; ++i){
+                        voxel.semantic_weights[i] = 0.09226132*voxel.semantic_weights[i] + 0.05595932*(voxel_left.semantic_weights[i] + voxel_right.semantic_weights[i] + voxel_above.semantic_weights[i] + voxel_below.semantic_weights[i] + voxel_front.semantic_weights[i] + voxel_behind.semantic_weights[i]) + 0.03394104*(voxel_above_left.semantic_weights[i] + voxel_above_right.semantic_weights[i] + voxel_below_left.semantic_weights[i] + voxel_below_right.semantic_weights[i] + voxel_front_left.semantic_weights[i] + voxel_front_right.semantic_weights[i] + voxel_behind_left.semantic_weights[i] + voxel_behind_right.semantic_weights[i] + voxel_front_above.semantic_weights[i] + voxel_front_below.semantic_weights[i] + voxel_behind_above.semantic_weights[i] + voxel_behind_below.semantic_weights[i]) + 0.02058628*(voxel_front_above_left.semantic_weights[i] + voxel_behind_above_left.semantic_weights[i] + voxel_behind_above_right.semantic_weights[i] + voxel_front_above_right.semantic_weights[i] + voxel_front_below_left.semantic_weights[i] + voxel_behind_below_left.semantic_weights[i] + voxel_behind_below_right.semantic_weights[i] + voxel_front_below_right.semantic_weights[i]);
+                    }
+                    value = 0.09226132*value + 0.05595932*(voxel_left.v + voxel_right.v + voxel_above.v + voxel_below.v + voxel_front.v + voxel_behind.v) + 0.03394104*(voxel_above_left.v + voxel_above_right.v + voxel_below_left.v + voxel_below_right.v + voxel_front_left.v + voxel_front_right.v + voxel_behind_left.v + voxel_behind_right.v + voxel_front_above.v + voxel_front_below.v + voxel_behind_above.v + voxel_behind_below.v) + 0.02058628*(voxel_front_above_left.v + voxel_behind_above_left.v + voxel_behind_above_right.v + voxel_front_above_right.v + voxel_front_below_left.v + voxel_behind_below_left.v + voxel_behind_below_right.v + voxel_front_below_right.v);
 
-        //         }
-        //     }
-        // }
+                }
+            }
+        }
     }
 #else
     virtual void operator() (const Range& range) const override
@@ -556,7 +552,7 @@ struct IntegrateInvoker : ParallelLoopBody
  
                         //update semantic vector
                         
-                        //voxel.semantic_weights[m]+=1;
+                        voxel.semantic_weights[m]+=1;
                         // for(int i = 0; i < voxel.semantic_weights.size() ; ++i){
                         //     std::cout << voxel.semantic_weights.at<int>(i) << std::endl;
                         // }
@@ -1686,12 +1682,12 @@ void TSDFVolumeGPU::fetchPointsNormals(OutputArray points, OutputArray normals) 
 cv::Ptr<TSDFVolume> makeTSDFVolume(Point3i _res,  float _voxelSize, cv::Affine3f _pose, float _truncDist, int _maxWeight,
                                    float _raycastStepFactor)
 {
-// #ifdef HAVE_OPENCL
-//     if(cv::ocl::useOpenCL()){
-//         printf("Using GPU\n");
-//         return cv::makePtr<TSDFVolumeGPU>(_res, _voxelSize, _pose, _truncDist, _maxWeight, _raycastStepFactor);
-//     }
-//  #endif
+#ifdef HAVE_OPENCL
+    if(cv::ocl::useOpenCL()){
+        printf("Using GPU\n");
+        return cv::makePtr<TSDFVolumeGPU>(_res, _voxelSize, _pose, _truncDist, _maxWeight, _raycastStepFactor);
+    }
+ #endif
     cv::ocl::setUseOpenCL(true);
     printf("tried\n");
     printf("%d\n", cv::ocl::useOpenCL());
