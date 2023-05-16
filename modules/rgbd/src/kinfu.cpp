@@ -264,7 +264,7 @@ void KinFuImpl<T>::render(OutputArray image, const Matx44f& _cameraPose) const
 
     Affine3f cameraPose(_cameraPose);
   
-    int label = 57;
+    int label = 2;
 
     const Affine3f id = Affine3f::Identity();
     if((cameraPose.rotation() == pose.rotation() && cameraPose.translation() == pose.translation()) ||

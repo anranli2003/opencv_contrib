@@ -147,23 +147,23 @@ struct RenderInvoker : ParallelLoopBody
                         cv::Vec3b(11, 255, 30),   // 54
                         cv::Vec3b(133, 31, 63),   // 55
                         cv::Vec3b(42, 82, 100),   // 56
-                        cv::Vec3b(0, 0, 255), //57
                     };
 
                     // Use a lookup table to get the color for the semantic class
                     const Vec3b& colorVec = colors[max_index];
 
-                    const float Ax = colorVec[0]/255.f;   //ambient color
+                    const float Ax = colorVec[2]/255.f;   //ambient color
                     const float Dx = colorVec[1]/255.f;   //diffuse color
-                    const float Sx = colorVec[2]/255.f;   //specular color
+                    const float Sx = colorVec[0]/255.f;   //specular color
 
-                     uchar ix = (uchar)((Ax*Ka*Dx + Lx*Kd*Dx*max(0.f, n.dot(l)) +
+                    uchar ig = (uchar)((Ax*Ka*Dx + Lx*Kd*Dx*max(0.f, n.dot(l)) +
+                                         Lx*Ks*Sx*specPow<sp>(max(0.f, r.dot(v))))*255.f);
+                    uchar ib = (uchar)((Ax*Ka*Dx + Lx*Kd*Ax*max(0.f, n.dot(l)) +
+                                         Lx*Ks*Sx*specPow<sp>(max(0.f, r.dot(v))))*255.f);
+                    uchar ir = (uchar)((Ax*Ka*Dx + Lx*Kd*Sx*max(0.f, n.dot(l)) +
                                          Lx*Ks*Sx*specPow<sp>(max(0.f, r.dot(v))))*255.f);
 
-                    // color = Vec4b(ix, ix, ix, 0);
-                    color = Vec4b(ix*colorVec[0],ix*colorVec[1], ix*colorVec[2],0);
-
-                    //color = Vec4b(colorVec[0],colorVec[1], colorVec[2],0);
+                    color = Vec4b(ib*colorVec[2],ig*colorVec[1], ir*colorVec[0], 0);
                 }
 
                 imgRow[x] = color;
