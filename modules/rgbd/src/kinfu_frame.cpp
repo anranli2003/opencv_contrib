@@ -96,9 +96,9 @@ struct RenderInvoker : ParallelLoopBody
                         cv::Vec3b(255, 255, 0),   // 3 yellow
                         cv::Vec3b(255, 0, 255),   // 4 magenta
                         cv::Vec3b(0, 255, 255),   // 5 cyan
-                        cv::Vec3b(128, 0, 0),     // 6 maroon
-                        cv::Vec3b(0, 128, 0),     // 7 dark green
-                        cv::Vec3b(0, 0, 128),     // 8 navy
+                        cv::Vec3b(200, 0, 0),     // 6 maroon
+                        cv::Vec3b(0, 200, 0),     // 7 dark green
+                        cv::Vec3b(0, 0, 200),     // 8 navy
                         cv::Vec3b(128, 128, 0),   // 9 olive
                         cv::Vec3b(128, 0, 128),   // 10 purple
                         cv::Vec3b(0, 128, 128),   // 11 teal
@@ -127,7 +127,7 @@ struct RenderInvoker : ParallelLoopBody
                         cv::Vec3b(64, 128, 128),  // 34 medium aqua
                         cv::Vec3b(128, 128, 64),  // 35 khaki
                         cv::Vec3b(192, 64, 0),    // 36 dark orange
-                        cv::Vec3b(255, 255, 255),       // 37
+                        cv::Vec3b(255, 255, 255), // 37
                         cv::Vec3b(160, 10, 0),    // 38
                         cv::Vec3b(100, 0, 8),     // 39
                         cv::Vec3b(0, 255, 255),   // 40

@@ -8,6 +8,7 @@
 #include "tsdf.hpp"
 #include "opencl_kernels_rgbd.hpp"
 #include <vector>
+#include <cstring>
 
 const int K = 57;
 namespace cv {
@@ -22,8 +23,7 @@ struct Voxel
 {
     volumeType v;
     int weight;
-    std::array<float, 57> semantic_weights;
-    //std::vector<float> semantic_weights;
+    std::array<float,57> semantic_weights;
 };
 
 typedef Vec<uchar, sizeof(Voxel)> VecT;
@@ -368,8 +368,6 @@ struct IntegrateInvoker : ParallelLoopBody
 
                         //get the value from the mask at ip mask.getvalueatpoint(ip)
                         m = semantic.at<uchar>(ip1.val[1], ip1.val[0]);
-
-                        //std::cout << "outputting m : " << std::endl << m << std::endl;
                     }
 
                     // norm(camPixVec) produces double which is too slow
@@ -390,15 +388,12 @@ struct IntegrateInvoker : ParallelLoopBody
                         int& weight = voxel.weight;
                         volumeType& value = voxel.v;
 
-                        //std::cout << "50th element: " << voxel.semantic_weights[50] << std::endl;
-
                         // update TSDF
                         value = (value*weight+tsdf) / (weight + 1);
                         weight = min(weight + 1, volume.maxWeight);
 
 
                         //update semantic vector
-
                         voxel.semantic_weights[m] += 1;
 
                         std::cout << "element in semantic_weights array: " << std::endl;
@@ -550,12 +545,9 @@ struct IntegrateInvoker : ParallelLoopBody
                         value = (value*weight+tsdf) / (weight + 1);
                         weight = min(weight + 1, volume.maxWeight);
  
-                        //update semantic vector
-                        
+                        //update semantic vector                   
                         voxel.semantic_weights[m]+=1;
-                        // for(int i = 0; i < voxel.semantic_weights.size() ; ++i){
-                        //     std::cout << voxel.semantic_weights.at<int>(i) << std::endl;
-                        // }
+
 
                     }
                 }
@@ -647,28 +639,6 @@ void TSDFVolumeCPU::integrate(InputArray _depth, const Semantic& semantic, float
     IntegrateInvoker ii(*this, depth, semantic, intrinsics, cameraPose, depthFactor);
     Range range(0, volResolution.x);
     parallel_for_(range, ii);
-
-
-
-    // // Update semantic weights
-    // for (int y = 0; y < depth.rows; ++y)
-    // {
-    //     for (int x = 0; x < depth.cols; ++x)
-    //     {
-    //         float depthValue = depth.at<float>(y, x);
-
-    //         // Check if depth value is valid
-    //         if (depthValue > 0)
-    //         {
-    //             int semanticClass = semantic.at<int>(y, x);
-                
-
-    //             Voxel& voxel = volume->at(voxelPos);
-
-    //             voxel.semantic_weights[semanticClass]+=1;
-    //         }
-    //     }
-    // }
 
 }
 
@@ -1356,6 +1326,17 @@ void TSDFVolumeCPU::fetchNormals(InputArray _points, OutputArray _normals) const
 #define HAVE_OPENCL
 #ifdef HAVE_OPENCL
 
+// Copied here for reference
+// typedef float volumeType;
+struct VoxelGPU
+{
+    volumeType v;
+    int weight;
+    float semantic_weights[1];
+    //std::vector<float> semantic_weights;
+};
+typedef Vec<uchar, sizeof(VoxelGPU)> VecGPUT;
+
 class TSDFVolumeGPU : public TSDFVolume
 {
 public:
@@ -1384,7 +1365,7 @@ TSDFVolumeGPU::TSDFVolumeGPU(Point3i _res, float _voxelSize, cv::Affine3f _pose,
                              float _raycastStepFactor) :
     TSDFVolume(_res, _voxelSize, _pose, _truncDist, _maxWeight, _raycastStepFactor, false)
 {
-    volume = UMat(1, volResolution.x * volResolution.y * volResolution.z, CV_32FC2);
+    volume = UMat(1, volResolution.x * volResolution.y * volResolution.z, rawType<VoxelGPU>());
 
     reset();
 }
@@ -1395,7 +1376,23 @@ void TSDFVolumeGPU::reset()
 {
     CV_TRACE_FUNCTION();
 
-    volume.setTo(Scalar(0, 0));
+    VoxelGPU empty;
+    std::memset(&empty, 0, sizeof(VoxelGPU));
+    
+    VecGPUT* v = reinterpret_cast<VecGPUT*>(&empty);
+
+    // volume.forEach<VecT>([](VecT& vv, const int* /* position */)
+    // {
+    //     Voxel& v = reinterpret_cast<Voxel&>(vv);
+    //     v.v = 0; v.weight = 0;
+        
+    //     v.semantic_weights = {0.0f};
+        
+    //     //v.semantic_weights = std::vector<float>(K, 0.0);
+
+    // });
+
+    volume.setTo(_InputArray(v, 1));
 }
 
 
@@ -1406,6 +1403,9 @@ void TSDFVolumeGPU::integrate(InputArray _depth,  const Semantic& _semantic, flo
     CV_TRACE_FUNCTION();
 
     UMat depth = _depth.getUMat();
+    cv::Mat semanticMat = _semantic; 
+    cv::UMat semantic = semanticMat.getUMat(cv::ACCESS_READ);
+    Voxel voxel;
 
     cv::String errorStr;
     cv::String name = "integrate";
@@ -1422,9 +1422,11 @@ void TSDFVolumeGPU::integrate(InputArray _depth,  const Semantic& _semantic, flo
     Vec4i volResGpu(volResolution.x, volResolution.y, volResolution.z);
     Vec2f fxy(intrinsics.fx, intrinsics.fy), cxy(intrinsics.cx, intrinsics.cy);
 
+
     // TODO: optimization possible
     // Use sampler for depth (mask needed)
     k.args(ocl::KernelArg::ReadOnly(depth),
+           ocl::KernelArg::ReadOnly(semantic),
            ocl::KernelArg::PtrReadWrite(volume),
            ocl::KernelArg::Constant(vol2cam.matrix.val,
                                     sizeof(vol2cam.matrix.val)),
