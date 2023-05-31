@@ -66,21 +66,28 @@ public:
 //--------------------------------------------------------------------------------------------modification 
 void TSDFVolumeCPU::front_test(){
     std::cout << "this is the front movement test" << std::endl;
-        Range temp_range1 = {500*250,500*500};
-        Range temp_range2 = {500*500*250+500*250,500*500*250+500*500};
+        Range temp1 = {0,500*250};
+        // Range temp_range1 = {500*250,500*500};
+        // Range temp_range2 = {500*500*250+500*250,500*500*250+500*500};
 
         for (int j = 0; j < 240; j++){
-            temp_range1.start+=500*500;
-            temp_range1.end+=500*500;
-
-            temp_range1.start+=500*500;
-            temp_range1.end+=500*500;
-            int i = temp_range1.start;
-            int k = temp_range2.start;
-            for ( ; i < temp_range1.end && k < temp_range2.end; i++ , k++){
-                volume.at<Voxel>(0,i) = volume.at<Voxel>(0,k);
-                // volume.at<Voxel>(0,i).weight = 100;
+            temp1.start+=500*500;
+            temp1.end += 500*500;
+            for (int i = temp1.start; i < temp1.end; i++){
+                volume.at<Voxel>(0,i).v = NAN;
             }
+            // temp_range1.start+=500*500;
+            // temp_range1.end+=500*500;
+
+            // temp_range1.start+=500*500;
+            // temp_range1.end+=500*500;
+            // int i = temp_range1.start;
+            // int k = temp_range2.start;
+            // for ( ; i < temp_range1.end && k < temp_range2.end; i++ , k++){
+            //     volume.at<Voxel>(0,i).v = NAN; 
+            //     volume.at<Voxel>(0,k).v = NAN;
+            //     // volume.at<Voxel>(0,i).weight = 100;
+            // }
         
         }
         
@@ -92,7 +99,7 @@ void TSDFVolumeCPU::map_ignore_test(std::vector<bool> dir_arr, float threshold){
     // std::cout << "here we want to ignore the old data in the map cube " << std::endl;
     int length = volDims[1]; //number of voxels in each direction 
     //float vol_size =  float(length)/volResolution.x;
-    // std::cout<< "the threshold is " << threshold <<std::endl;
+    std::cout<< "the threshold is " << threshold <<std::endl;
     // std::cout<< "the length is " << length <<std::endl;
     Mat new_volume = Mat(1,length*length*length,rawType<Voxel>());
 
@@ -216,8 +223,11 @@ void TSDFVolumeCPU::map_ignore_test(std::vector<bool> dir_arr, float threshold){
             int o_i = old_shift_range_each.start;
             int n_i = new_shift_range_each.start;
             for (; o_i < old_shift_range_each.end && n_i < new_shift_range_each.end; o_i++, n_i++){
-                // new_volume.at<Voxel>(0,n_i) = volume.at<Voxel>(0,o_i);
-                new_volume.at<Voxel>(0,n_i).v = NAN;
+                new_volume.at<Voxel>(0,n_i).v = volume.at<Voxel>(0,o_i).v;
+                new_volume.at<Voxel>(0,n_i).weight = volume.at<Voxel>(0,o_i).weight;
+                // new_volume.at<Voxel>(0,n_i).v = 0;
+                // new_volume.at<Voxel>(0,n_i).weight = 0;
+                // new_volume.at<Voxel>(0,n_i).v = NAN;
             }
             //set the v and weight value to be default 0
             for (int i = new_create_range_each.start; i < new_create_range_each.end; i++){
@@ -232,6 +242,45 @@ void TSDFVolumeCPU::map_ignore_test(std::vector<bool> dir_arr, float threshold){
     }
 
     case direction::back:{
+       std::cout << "this is the back movement test" << std::endl;
+        Range new_create_range_each = {length*(length-threshold),length*length};
+        Range new_shift_range_each = {0,length*(length-threshold)};
+        Range old_shift_range_each = {threshold*length,length*length};
+         
+
+        for (int j = 0; j < length; j++){
+            if (j!=0){
+            //update new_create_range_each
+            new_create_range_each.start += length*length;
+            new_create_range_each.end += length*length;
+            //update new_shift_range_each 
+            new_shift_range_each.start += length*length;
+            new_shift_range_each.end += length*length;
+            //update old_shift_range_each 
+            old_shift_range_each.start += length*length;
+            old_shift_range_each.end += length*length;
+            // std::cout << "test---------------here" << std::endl;
+            }
+
+            //shift old value from old volume to the new volume 
+            int o_i = old_shift_range_each.start;
+            int n_i = new_shift_range_each.start;
+            for (; o_i < old_shift_range_each.end && n_i < new_shift_range_each.end; o_i++, n_i++){
+                new_volume.at<Voxel>(0,n_i).v = volume.at<Voxel>(0,o_i).v;
+                new_volume.at<Voxel>(0,n_i).weight = volume.at<Voxel>(0,o_i).weight;
+                // new_volume.at<Voxel>(0,n_i).v = 0;
+                // new_volume.at<Voxel>(0,n_i).weight = 0;
+                // new_volume.at<Voxel>(0,n_i).v = NAN;
+            }
+            //set the v and weight value to be default 0
+            for (int i = new_create_range_each.start; i < new_create_range_each.end; i++){
+                new_volume.at<Voxel>(0,i).v = 0;
+                new_volume.at<Voxel>(0,i).weight = 0;
+            }
+             
+             
+        }
+        volume = new_volume;
         break;
     }
     default:

@@ -52,7 +52,7 @@ Ptr<Params> Params::defaultParams()
 
     // default pose of volume cube
     // p.volumePose = Affine3f().translate(Vec3f(-volSize/2.f, -volSize/2.f, 0.5f));
-    p.volumePose = Affine3f().translate(Vec3f(-0.5f, -0.3f,0.5f));//<<---------------------------------------modification 
+    p.volumePose = Affine3f().translate(Vec3f(-0.5f, -0.3f,0.7f));//<<---------------------------------------modification 
 
     
     //------------------------------------------------------------------modification
@@ -249,25 +249,25 @@ bool KinFuImpl<T>::update_the_map (float x_direction_movement,float z_direction_
     //x_positive, x_begative, z_positive, z_negative
     std::vector<bool> dir_arr = {false,false,false,false};    
      
-    //shift to right 
-    if (std::abs(x_direction_movement) > threshold_meter && x_direction_movement >0) {
-        using namespace std;
-        cout << "we need to update the map cube in x_position direction" << endl;
-        pose = Affine3f::Identity();
-        dir_arr[0] = true;
-        volume->map_ignore_test(dir_arr,threshold);
-        return true;
-    }
+    // //shift to right 
+    // if (std::abs(x_direction_movement) > threshold_meter && x_direction_movement >0) {
+    //     using namespace std;
+    //     cout << "we need to update the map cube in x_position direction" << endl;
+    //     pose = Affine3f::Identity();
+    //     dir_arr[0] = true;
+    //     volume->map_ignore_test(dir_arr,threshold);
+    //     return true;
+    // }
     
-    //shift to left
-    if (std::abs(x_direction_movement) > threshold_meter && x_direction_movement < 0) {
-        using namespace std;
-        cout << "we need to update the map cube in x_negative direction" << endl;
-        pose = Affine3f::Identity();
-        dir_arr[1] = true;
-        volume->map_ignore_test(dir_arr,threshold);
-        return true;
-    }
+    // //shift to left
+    // if (std::abs(x_direction_movement) > threshold_meter && x_direction_movement < 0) {
+    //     using namespace std;
+    //     cout << "we need to update the map cube in x_negative direction" << endl;
+    //     pose = Affine3f::Identity();
+    //     dir_arr[1] = true;
+    //     volume->map_ignore_test(dir_arr,threshold);
+    //     return true;
+    // }
 
     //shift forward
     if ((std::abs(z_direction_movement) > threshold_meter ) && z_direction_movement>0) {
@@ -347,8 +347,6 @@ bool KinFuImpl<T>::updateT(const T& _depth)
     // // umat2.copyTo(mat2);
     // cv::imshow("umat2",umat2);
 
-
-
     // T umat33 = newPoints[2];
     // // Mat mat3;
     // // umat3.copyTo(mat3);
@@ -358,9 +356,6 @@ bool KinFuImpl<T>::updateT(const T& _depth)
     // // Mat mat3;
     // // umat3.copyTo(mat3);
     // cv::imshow("umat3",umat3);
-
-
-
 
     // T umat4 = newPoints[3];
     // Mat mat4;
@@ -390,7 +385,7 @@ bool KinFuImpl<T>::updateT(const T& _depth)
         // std::cout <<  "in x direction " << /*x_move_history - */pose.translation()[0] << std::endl;
         if(update_the_map(pose.translation()[0], pose.translation()[2])){
             std::cout << "we let the x go back to zero" << std::endl;
-            
+            frameCounter = -1;
             //return false;
         }
         //---------------------------------------------------------------------------modification
@@ -410,6 +405,7 @@ bool KinFuImpl<T>::updateT(const T& _depth)
         // using namespace std;
         // cout << "the size of pyrPoints is " << pyrPoints[0].size()<< ", "<< pyrPoints[1].size() <<", " << pyrPoints[2].size() <<", "<< endl;
         if(!success){
+            std::cout << "--------------------------------!!!--------------------------------" << std::endl;
             return false;
         }
         using namespace std;
