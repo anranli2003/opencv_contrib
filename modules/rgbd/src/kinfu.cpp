@@ -52,13 +52,13 @@ Ptr<Params> Params::defaultParams()
 
     // default pose of volume cube
     // p.volumePose = Affine3f().translate(Vec3f(-volSize/2.f, -volSize/2.f, 0.5f));
-    p.volumePose = Affine3f().translate(Vec3f(-0.5f, -0.3f,0.7f));//<<---------------------------------------modification 
+    p.volumePose = Affine3f().translate(Vec3f(-0.5f, -0.4f,0.8f));//<<---------------------------------------modification 
 
     
     //------------------------------------------------------------------modification
     //we define the threshold of the map cube update here (in x and z direction)
     //x direction is move left or right && z direction is move front or back 
-    p.map_update_threshold = 50; //consifer it as how many voxels
+    p.map_update_threshold = 75; //consifer it as how many voxels
     //------------------------------------------------------------------modification
 
 
@@ -146,9 +146,13 @@ private:
 //-----------------------------------------------------------------------------------modification
 template< typename T >
 void KinFuImpl<T>::test_function(){
-    // std::cout << "this is the test of the funciton creation" << std::endl;
+    std::cout << "this is the test of the funciton creation" << std::endl;
     //volume->map_ignore_test();
-    volume->front_test();
+
+    // volume->front_test();
+    pose = Affine3f::Identity();
+    
+    // std::cout << "the threshold_voxel number is " << params.map_update_threshold << std::endl;
     
 }
 
@@ -249,25 +253,25 @@ bool KinFuImpl<T>::update_the_map (float x_direction_movement,float z_direction_
     //x_positive, x_begative, z_positive, z_negative
     std::vector<bool> dir_arr = {false,false,false,false};    
      
-    // //shift to right 
-    // if (std::abs(x_direction_movement) > threshold_meter && x_direction_movement >0) {
-    //     using namespace std;
-    //     cout << "we need to update the map cube in x_position direction" << endl;
-    //     pose = Affine3f::Identity();
-    //     dir_arr[0] = true;
-    //     volume->map_ignore_test(dir_arr,threshold);
-    //     return true;
-    // }
+    //shift to right 
+    if (std::abs(x_direction_movement) > threshold_meter && x_direction_movement >0) {
+        using namespace std;
+        cout << "we need to update the map cube in x_position direction" << endl;
+        pose = Affine3f::Identity();
+        dir_arr[0] = true;
+        volume->map_ignore_test(dir_arr,threshold);
+        return true;
+    }
     
-    // //shift to left
-    // if (std::abs(x_direction_movement) > threshold_meter && x_direction_movement < 0) {
-    //     using namespace std;
-    //     cout << "we need to update the map cube in x_negative direction" << endl;
-    //     pose = Affine3f::Identity();
-    //     dir_arr[1] = true;
-    //     volume->map_ignore_test(dir_arr,threshold);
-    //     return true;
-    // }
+    //shift to left
+    if (std::abs(x_direction_movement) > threshold_meter && x_direction_movement < 0) {
+        using namespace std;
+        cout << "we need to update the map cube in x_negative direction" << endl;
+        pose = Affine3f::Identity();
+        dir_arr[1] = true;
+        volume->map_ignore_test(dir_arr,threshold);
+        return true;
+    }
 
     //shift forward
     if ((std::abs(z_direction_movement) > threshold_meter ) && z_direction_movement>0) {

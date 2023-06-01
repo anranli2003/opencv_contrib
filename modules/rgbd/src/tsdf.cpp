@@ -65,31 +65,62 @@ public:
 
 //--------------------------------------------------------------------------------------------modification 
 void TSDFVolumeCPU::front_test(){
+    using namespace std;
     std::cout << "this is the front movement test" << std::endl;
-        Range temp1 = {0,500*250};
-        // Range temp_range1 = {500*250,500*500};
-        // Range temp_range2 = {500*500*250+500*250,500*500*250+500*500};
+    Range temp0 = {0,200}; // in each horiental line in each slide
+    Range temp1 = {0,200}; // which line in each side 
+    Range temp2 = {0,100}; // in which slide
+    // Range temp_range1 = {500*250,500*500};
+    // Range temp_range2 = {500*500*250+500*250,500*500*250+500*500};
 
-        for (int j = 0; j < 240; j++){
-            temp1.start+=500*500;
-            temp1.end += 500*500;
-            for (int i = temp1.start; i < temp1.end; i++){
-                volume.at<Voxel>(0,i).v = NAN;
+    for (int i = temp2.start; i < temp2.end; i++){ // which slide in the volume 
+        for(int j = temp1.start; j < temp1.end; j++ ){ // which line in the slide
+            for(int k = temp0.start; k < temp0.end; k++){ //which voxel in the line 
+                int index = i*500*500 + j*500+k;
+                volume.at<Voxel>(0,index).weight = 0;
+                volume.at<Voxel>(0,index).v = 0;
             }
-            // temp_range1.start+=500*500;
-            // temp_range1.end+=500*500;
-
-            // temp_range1.start+=500*500;
-            // temp_range1.end+=500*500;
-            // int i = temp_range1.start;
-            // int k = temp_range2.start;
-            // for ( ; i < temp_range1.end && k < temp_range2.end; i++ , k++){
-            //     volume.at<Voxel>(0,i).v = NAN; 
-            //     volume.at<Voxel>(0,k).v = NAN;
-            //     // volume.at<Voxel>(0,i).weight = 100;
-            // }
-        
         }
+    }
+
+    // pose = Affine3f::Identity();
+
+
+
+    // for (int j = 0; j < 100; j++){
+    //     temp1.start+=(500*500);
+    //     temp1.end += (500*500);
+    //     for (int i = temp1.start; i < temp1.end; i++){
+    //         volume.at<Voxel>(0,i).weight = 100;
+    //         volume.at<Voxel>(0,i).v = 0;
+    //     }
+            
+
+    //     // temp_range1.start+=500*500;
+    //     // temp_range1.end+=500*500;
+
+    //     // temp_range1.start+=500*500;
+    //     // temp_range1.end+=500*500;
+    //     // int i = temp_range1.start;
+    //     // int k = temp_range2.start;
+    //     // for ( ; i < temp_range1.end && k < temp_range2.end; i++ , k++){
+    //     //     volume.at<Voxel>(0,i).v = NAN; 
+    //     //     volume.at<Voxel>(0,k).v = NAN;
+    //     //     // volume.at<Voxel>(0,i).weight = 100;
+    //     // }
+    
+    // }
+        
+    // cout << "the volexsize is " << voxelSize << endl;
+    // Range temp2 = {0,5};
+    // for (int i = 0; i < 5; i ++){
+    //     temp2.start+=10;
+    //     temp2.end+=10;
+    //     for (int j = temp2.start; j < temp2.end; j++){
+    //         cout << "the test index is: " << j << endl;
+    //     }
+    // }
+       
         
 }
 
@@ -200,88 +231,159 @@ void TSDFVolumeCPU::map_ignore_test(std::vector<bool> dir_arr, float threshold){
     }
     case direction::front:{
         std::cout << "this is the front movement test" << std::endl;
-        Range new_create_range_each = {0,length*threshold};
-        Range new_shift_range_each = {length*threshold,length*length};
-        Range old_shift_range_each = {0,length*(length-threshold)};
+        Range old_keep = {length-threshold,threshold}; // which voxels in the row 
+        // Range old_keep_1 = {0,length};//which row in the slide 
+        // Range old_keep_2 = {0,length};//which slide in the volume 
+
+        Range new_shift = {0,length-threshold}; // which voxels in the row 
+        // Range new_shift_1 = {0,length};//which row in the slide 
+        // Range new_shift_2 = {0,length};//which slide in the volume 
+
+        Range new_create = {threshold,length};
+        // Range new_create_1 = {0,length};//which row in the slide 
+        // Range new_create_2 = {0,length};//which slide in the volume 
+
+        Range row_range = {0,length};//which row in the slide 
+        Range slide_range = {0,length};//which slide in the volume 
+
+        for (int i = slide_range.start; i < slide_range.end; i++ ){// which voxels in the row 
+            for(int j = row_range.start; j<row_range.end;j++){//which row in the slide 
+                //copy and past the old data 
+                int k_old = old_keep.start; 
+                int k_new = new_shift.start;
+                for(;k_old < old_keep.end && k_new < new_shift.end; k_old++, k_new++){//which slide in the volume     
+                    int index_old = i * length * length + j * length + k_old;
+                    int index_new = i * length * length + j * length + k_new;
+                    new_volume.at<Voxel>(0,index_new) = volume.at<Voxel>(0,index_old);
+                }
+                //initialize the new data 
+                for (int k_create = new_create.start; k_create < new_create.end; k_create++){
+                    int index_create = i * length * length + j * length + k_create;
+                    new_volume.at<Voxel>(0,index_create).v = 0;
+                    new_volume.at<Voxel>(0,index_create).weight = 0;
+                }
+            }
+        }
+        //update the volume
+        volume = new_volume;
+        //-------------------------------------------------------------------------------------------
+        // threshold = 100;
+        // Range new_create_range_each = {0,length*threshold};
+        // Range new_shift_range_each = {length*threshold,length*length};
+        // Range old_shift_range_each = {0,length*(length-threshold)};
          
 
-        for (int j = 0; j < length; j++){
-            if (j!=0){
-            //update new_create_range_each
-            new_create_range_each.start += length*length;
-            new_create_range_each.end += length*length;
-            //update new_shift_range_each 
-            new_shift_range_each.start += length*length;
-            new_shift_range_each.end += length*length;
-            //update old_shift_range_each 
-            old_shift_range_each.start += length*length;
-            old_shift_range_each.end += length*length;
-            // std::cout << "test---------------here" << std::endl;
-            }
+        // for (int j = 0; j < length; j++){
+        //     if (j!=0){
+        //     //update new_create_range_each
+        //     new_create_range_each.start += length*length;
+        //     new_create_range_each.end += length*length;
+        //     //update new_shift_range_each 
+        //     new_shift_range_each.start += length*length;
+        //     new_shift_range_each.end += length*length;
+        //     //update old_shift_range_each 
+        //     old_shift_range_each.start += length*length;
+        //     old_shift_range_each.end += length*length;
+        //     // std::cout << "test---------------here" << std::endl;
+        //     }
 
-            //shift old value from old volume to the new volume 
-            int o_i = old_shift_range_each.start;
-            int n_i = new_shift_range_each.start;
-            for (; o_i < old_shift_range_each.end && n_i < new_shift_range_each.end; o_i++, n_i++){
-                new_volume.at<Voxel>(0,n_i).v = volume.at<Voxel>(0,o_i).v;
-                new_volume.at<Voxel>(0,n_i).weight = volume.at<Voxel>(0,o_i).weight;
-                // new_volume.at<Voxel>(0,n_i).v = 0;
-                // new_volume.at<Voxel>(0,n_i).weight = 0;
-                // new_volume.at<Voxel>(0,n_i).v = NAN;
-            }
-            //set the v and weight value to be default 0
-            for (int i = new_create_range_each.start; i < new_create_range_each.end; i++){
-                new_volume.at<Voxel>(0,i).v = 0;
-                new_volume.at<Voxel>(0,i).weight = 0;
-            }
+        //     //shift old value from old volume to the new volume 
+        //     int o_i = old_shift_range_each.start;
+        //     int n_i = new_shift_range_each.start;
+        //     for (; o_i < old_shift_range_each.end && n_i < new_shift_range_each.end; o_i++, n_i++){
+        //         new_volume.at<Voxel>(0,n_i).v = volume.at<Voxel>(0,o_i).v;
+        //         new_volume.at<Voxel>(0,n_i).weight = volume.at<Voxel>(0,o_i).weight;
+        //         // new_volume.at<Voxel>(0,n_i).v = 0;
+        //         // new_volume.at<Voxel>(0,n_i).weight = 0;
+        //         // new_volume.at<Voxel>(0,n_i).v = NAN;
+        //     }
+        //     //set the v and weight value to be default 0
+        //     for (int i = new_create_range_each.start; i < new_create_range_each.end; i++){
+        //         new_volume.at<Voxel>(0,i).v = 0;
+        //         new_volume.at<Voxel>(0,i).weight = 0;
+        //     }
              
              
-        }
-        volume = new_volume;
+        // }
+        // volume = new_volume;
         break;
     }
 
     case direction::back:{
        std::cout << "this is the back movement test" << std::endl;
-        Range new_create_range_each = {length*(length-threshold),length*length};
-        Range new_shift_range_each = {0,length*(length-threshold)};
-        Range old_shift_range_each = {threshold*length,length*length};
-         
 
-        for (int j = 0; j < length; j++){
-            if (j!=0){
-            //update new_create_range_each
-            new_create_range_each.start += length*length;
-            new_create_range_each.end += length*length;
-            //update new_shift_range_each 
-            new_shift_range_each.start += length*length;
-            new_shift_range_each.end += length*length;
-            //update old_shift_range_each 
-            old_shift_range_each.start += length*length;
-            old_shift_range_each.end += length*length;
-            // std::cout << "test---------------here" << std::endl;
-            }
 
-            //shift old value from old volume to the new volume 
-            int o_i = old_shift_range_each.start;
-            int n_i = new_shift_range_each.start;
-            for (; o_i < old_shift_range_each.end && n_i < new_shift_range_each.end; o_i++, n_i++){
-                new_volume.at<Voxel>(0,n_i).v = volume.at<Voxel>(0,o_i).v;
-                new_volume.at<Voxel>(0,n_i).weight = volume.at<Voxel>(0,o_i).weight;
-                // new_volume.at<Voxel>(0,n_i).v = 0;
-                // new_volume.at<Voxel>(0,n_i).weight = 0;
-                // new_volume.at<Voxel>(0,n_i).v = NAN;
+        Range old_keep = {0,length-threshold}; // which voxels in the row 
+
+        Range new_shift = {threshold,length}; // which voxels in the row 
+
+        Range new_create = {0,threshold}; // which voxels in the row 
+
+        Range row_range = {0,length};//which row in the slide 
+        Range slide_range = {0,length};//which slide in the volume 
+
+        for (int i = slide_range.start; i < slide_range.end; i++ ){// which voxels in the row 
+            for(int j = row_range.start; j<row_range.end;j++){//which row in the slide 
+                //copy and past the old data 
+                int k_old = old_keep.start; 
+                int k_new = new_shift.start;
+                for(;k_old < old_keep.end && k_new < new_shift.end; k_old++, k_new++){//which slide in the volume     
+                    int index_old = i * length * length + j * length + k_old;
+                    int index_new = i * length * length + j * length + k_new;
+                    new_volume.at<Voxel>(0,index_new) = volume.at<Voxel>(0,index_old);
+                }
+                //initialize the new data 
+                for (int k_create = new_create.start; k_create < new_create.end; k_create++){
+                    int index_create = i * length * length + j * length + k_create;
+                    new_volume.at<Voxel>(0,index_create).v = 0;
+                    new_volume.at<Voxel>(0,index_create).weight = 0;
+                }
             }
-            //set the v and weight value to be default 0
-            for (int i = new_create_range_each.start; i < new_create_range_each.end; i++){
-                new_volume.at<Voxel>(0,i).v = 0;
-                new_volume.at<Voxel>(0,i).weight = 0;
-            }
-             
-             
         }
+        //update the volume
         volume = new_volume;
         break;
+
+
+        // Range new_create_range_each = {length*(length-threshold),length*length};
+        // Range new_shift_range_each = {0,length*(length-threshold)};
+        // Range old_shift_range_each = {threshold*length,length*length};
+         
+
+        // for (int j = 0; j < length; j++){
+        //     if (j!=0){
+        //     //update new_create_range_each
+        //     new_create_range_each.start += length*length;
+        //     new_create_range_each.end += length*length;
+        //     //update new_shift_range_each 
+        //     new_shift_range_each.start += length*length;
+        //     new_shift_range_each.end += length*length;
+        //     //update old_shift_range_each 
+        //     old_shift_range_each.start += length*length;
+        //     old_shift_range_each.end += length*length;
+        //     // std::cout << "test---------------here" << std::endl;
+        //     }
+
+        //     //shift old value from old volume to the new volume 
+        //     int o_i = old_shift_range_each.start;
+        //     int n_i = new_shift_range_each.start;
+        //     for (; o_i < old_shift_range_each.end && n_i < new_shift_range_each.end; o_i++, n_i++){
+        //         new_volume.at<Voxel>(0,n_i).v = volume.at<Voxel>(0,o_i).v;
+        //         new_volume.at<Voxel>(0,n_i).weight = volume.at<Voxel>(0,o_i).weight;
+        //         // new_volume.at<Voxel>(0,n_i).v = 0;
+        //         // new_volume.at<Voxel>(0,n_i).weight = 0;
+        //         // new_volume.at<Voxel>(0,n_i).v = NAN;
+        //     }
+        //     //set the v and weight value to be default 0
+        //     for (int i = new_create_range_each.start; i < new_create_range_each.end; i++){
+        //         new_volume.at<Voxel>(0,i).v = 0;
+        //         new_volume.at<Voxel>(0,i).weight = 0;
+        //     }
+             
+             
+        // }
+        // volume = new_volume;
+        // break;
     }
     default:
         break;
