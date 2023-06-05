@@ -199,7 +199,15 @@ public:
     */
     CV_WRAP virtual bool update(InputArray depth) = 0;
 
-    virtual void test_function() = 0; // <------------------modification 
+    // <--------------------------------------------------------------------------------modification 
+    virtual void test_function() = 0;  
+
+    virtual void test_function2() = 0;  
+
+    virtual void set_map_shift_with_camera() = 0; 
+
+    virtual void set_last_update_position() = 0;
+    // <--------------------------------------------------------------------------------modification 
 };
 
 //! @}

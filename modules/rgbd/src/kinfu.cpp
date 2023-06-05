@@ -52,7 +52,7 @@ Ptr<Params> Params::defaultParams()
 
     // default pose of volume cube
     // p.volumePose = Affine3f().translate(Vec3f(-volSize/2.f, -volSize/2.f, 0.5f));
-    p.volumePose = Affine3f().translate(Vec3f(-0.5f, -0.4f,0.8f));//<<---------------------------------------modification 
+    p.volumePose = Affine3f().translate(Vec3f(-0.5f, -0.4f,0.7f));//<<---------------------------------------modification 
 
     
     //------------------------------------------------------------------modification
@@ -85,7 +85,7 @@ Ptr<Params> Params::coarseParams()
     p->icpIterations = {5, 3, 2};
     p->pyramidLevels = (int)p->icpIterations.size();
 
-    float volSize = 3.f; //<-----------------------------------modification
+    float volSize = 1.f; //<-----------------------------------modification
     p->volumeDims = Vec3i::all(128); //number of voxels
     p->voxelSize  = volSize/128.f;
 
@@ -124,9 +124,16 @@ public:
     //----------------------------------------------------------------------------modification 
     void test_function();
 
+    void test_function2();
+
     bool update_the_map (float x_direction_movement,float z_direction_movement);
 
     void modify_param(float x_in);
+
+    void set_map_shift_with_camera();
+
+    void set_last_update_position();
+
 
     //------------------------------------------------------------------------------modification
 private:
@@ -140,7 +147,13 @@ private:
     std::vector<T> pyrPoints;
     std::vector<T> pyrNormals;
 
-    float x_move_history;//----------------------------------------modification
+    //-------------------------------------------------------------------------------modification
+    //float x_move_history; 
+    
+    //if the distance between current and last position in x or z direction is larger than the threshold, then
+    //have to update the position in that direction 
+    Vec3f last_update_position; 
+    bool map_shift_with_camera;
 };
 
 //-----------------------------------------------------------------------------------modification
@@ -149,11 +162,17 @@ void KinFuImpl<T>::test_function(){
     std::cout << "this is the test of the funciton creation" << std::endl;
     //volume->map_ignore_test();
 
-    // volume->front_test();
-    pose = Affine3f::Identity();
+    volume->front_test();
+    // pose = Affine3f::Identity();
     
     // std::cout << "the threshold_voxel number is " << params.map_update_threshold << std::endl;
     
+}
+
+template< typename T >
+void KinFuImpl<T>::test_function2(){
+    std::cout << "2" << std::endl;
+    volume->front_test2();
 }
 
 template< typename T >
@@ -162,6 +181,26 @@ void KinFuImpl<T>::modify_param(float x_in){
     temp_translation[0]+=x_in;
     params.volumePose.translation() = temp_translation;
 }
+
+template< typename T >
+void KinFuImpl<T>::set_map_shift_with_camera(){
+    using namespace std;
+    if (map_shift_with_camera == false){
+        map_shift_with_camera = true;
+        cout << "we set map_shift_with_camera to be true" << endl;
+    }
+    else{
+        map_shift_with_camera = false;
+        cout << "we set map_shift_with_camera to be false" << endl;
+    }
+}
+
+template< typename T >
+void KinFuImpl<T>::set_last_update_position(){
+    last_update_position = pose.translation();
+    std::cout << "we set the lasr_update_position" << std::endl;
+}
+ 
 //------------------------------------------------------------------------------------modification
 
 template< typename T >
@@ -174,6 +213,10 @@ KinFuImpl<T>::KinFuImpl(const Params &_params) :
     pyrPoints(), pyrNormals()
 {
     reset();
+    //---------------------------------------------------------------modification 
+    last_update_position = {0,0,0};
+    //---------------------------------------------------------------modification 
+
 }
 
 template< typename T >
@@ -254,17 +297,18 @@ bool KinFuImpl<T>::update_the_map (float x_direction_movement,float z_direction_
     std::vector<bool> dir_arr = {false,false,false,false};    
      
     //shift to right 
-    if (std::abs(x_direction_movement) > threshold_meter && x_direction_movement >0) {
+    if (std::abs(x_direction_movement) > threshold_meter && x_direction_movement >0 && map_shift_with_camera) {
         using namespace std;
         cout << "we need to update the map cube in x_position direction" << endl;
         pose = Affine3f::Identity();
         dir_arr[0] = true;
         volume->map_ignore_test(dir_arr,threshold);
+        // last_update_position[0] = 0;
         return true;
     }
     
     //shift to left
-    if (std::abs(x_direction_movement) > threshold_meter && x_direction_movement < 0) {
+    if (std::abs(x_direction_movement) > threshold_meter && x_direction_movement < 0 && map_shift_with_camera) {
         using namespace std;
         cout << "we need to update the map cube in x_negative direction" << endl;
         pose = Affine3f::Identity();
@@ -274,7 +318,7 @@ bool KinFuImpl<T>::update_the_map (float x_direction_movement,float z_direction_
     }
 
     //shift forward
-    if ((std::abs(z_direction_movement) > threshold_meter ) && z_direction_movement>0) {
+    if ((std::abs(z_direction_movement) > threshold_meter ) && z_direction_movement>0 && map_shift_with_camera) {
         using namespace std;
         cout << "we need to update the map cube in z_positive direction" << endl;
         pose = Affine3f::Identity();
@@ -284,7 +328,7 @@ bool KinFuImpl<T>::update_the_map (float x_direction_movement,float z_direction_
     }
 
     //shift back 
-    if (std::abs(z_direction_movement) > threshold_meter && z_direction_movement<0) {
+    if (std::abs(z_direction_movement) > threshold_meter && z_direction_movement<0 && map_shift_with_camera) {
         using namespace std;
         cout << "we need to update the map cube in z_negative direction" << endl;
         pose = Affine3f::Identity();
@@ -385,13 +429,43 @@ bool KinFuImpl<T>::updateT(const T& _depth)
     else
     {   
         //--------------------------------------------------------------------------modification 
-        std::cout <<  "in z direction " << pose.translation()[2] << std::endl;
-        // std::cout <<  "in x direction " << /*x_move_history - */pose.translation()[0] << std::endl;
-        if(update_the_map(pose.translation()[0], pose.translation()[2])){
+        std::cout <<  "in z direction " << pose.translation()[2];
+        std::cout <<  "in x direction " << /*x_move_history - */pose.translation()[0] << std::endl;
+        // std::cout << "the z direction last store: " << last_update_position[2]<< " " 
+        //     << "the x direction last store: " << last_update_position[0] << "     "
+        //     << pose.translation()[2] - last_update_position[2] << ", "
+        //     << pose.translation()[0] - last_update_position[0]  << std::endl;
+
+        //calcuate the difference in x and z direction 
+        float x_shift = pose.translation()[0] - last_update_position[0];
+        float z_shift = pose.translation()[2] - last_update_position[2];
+        //update the last_update_position 
+        // float threshold_meter = params.map_update_threshold * params.voxelSize;
+        // if (std::abs(x_shift)>threshold_meter){
+        //     last_update_position[0] += x_shift;
+        //     std::cout <<"update the last_update_position in x direction " << std::endl;
+        // }
+        // if (std::abs(z_shift)>threshold_meter){
+        //     last_update_position[2] += z_shift;
+        //     std::cout <<"update the last_update_position in z direction " << std::endl;
+
+        // }
+
+        // std::cout << "z_shift: " << z_shift << ", " << "x_shift: " << x_shift << std::endl;
+        //use the shift distance to check if 
+        if(update_the_map(x_shift, z_shift)){
             std::cout << "we let the x go back to zero" << std::endl;
-            frameCounter = -1;
+            // set_last_update_position();
+            // frameCounter = -1;
             //return false;
         }
+
+        // if(update_the_map(pose.translation()[0], pose.translation()[2])){
+        //     std::cout << "we let the x go back to zero" << std::endl;
+        //     // frameCounter = -1;
+        //     //return false;
+        // }
+
         //---------------------------------------------------------------------------modification
         
 

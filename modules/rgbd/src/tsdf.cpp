@@ -47,6 +47,7 @@ public:
     //---------------------------------------------------------modification
     virtual void map_ignore_test(std::vector<bool> dir_arr, float threshold) override;
     virtual void front_test() override;
+    virtual void front_test2() override;
     //----------------------------------------------------------modification 
 
 #if USE_INTRINSICS
@@ -67,24 +68,30 @@ public:
 void TSDFVolumeCPU::front_test(){
     using namespace std;
     std::cout << "this is the front movement test" << std::endl;
-    Range temp0 = {0,200}; // in each horiental line in each slide
-    Range temp1 = {0,200}; // which line in each side 
-    Range temp2 = {0,100}; // in which slide
+    // Range temp0 = {0,400}; // in each horiental line in each slide
+    // Range temp1 = {0,200}; // which line in each side 
+    // Range temp2 = {0,100}; // in which slide
     // Range temp_range1 = {500*250,500*500};
     // Range temp_range2 = {500*500*250+500*250,500*500*250+500*500};
 
-    for (int i = temp2.start; i < temp2.end; i++){ // which slide in the volume 
-        for(int j = temp1.start; j < temp1.end; j++ ){ // which line in the slide
-            for(int k = temp0.start; k < temp0.end; k++){ //which voxel in the line 
-                int index = i*500*500 + j*500+k;
-                volume.at<Voxel>(0,index).weight = 0;
-                volume.at<Voxel>(0,index).v = 0;
-            }
-        }
-    }
+    // for (int i = temp2.start; i < temp2.end; i++){ // which slide in the volume 
+    //     for(int j = temp1.start; j < temp1.end; j++ ){ // which line in the slide
+    //         for(int k = temp0.start; k < temp0.end; k++){ //which voxel in the line 
+    //             int index = i*500*500 + j*500+k;
+    //             volume.at<Voxel>(0,index).weight = 0;
+    //             volume.at<Voxel>(0,index).v = 0;
+    //         }
+    //     }
+    // }
 
-    // pose = Affine3f::Identity();
+    cout << "the tsdf position is " << pose.translation()[0] << ", " <<  pose.translation()[1] << ", " <<  pose.translation()[2] << endl;
+    // cout << "use matrix express" << pose.matrix[0][3] = 5 << endl;
+    Vec3f tran_vec(0,0,0.2);
+ 
+    pose = pose.translate(tran_vec);
 
+    cout << "the tsdf position is " << pose.translation()[0] << ", " <<  pose.translation()[1] << ", " <<  pose.translation()[2] << endl;
+    // cout << pose.matrix << endl;
 
 
     // for (int j = 0; j < 100; j++){
@@ -120,8 +127,101 @@ void TSDFVolumeCPU::front_test(){
     //         cout << "the test index is: " << j << endl;
     //     }
     // }
+
+
+
+    float length = 500;
+    float threshold = 100;
+    Mat new_volume = Mat(1,length*length*length,rawType<Voxel>());
+    // //shift the map 
+    // Vec3f translation_vec = (0,0,0.15);
+    // pose = pose.translate(translation_vec);
+    // std::cout<< "we use the map indipendent shift--front_shift" << std::endl;
+    //do the calculation 
+    std::cout << "this is the front movement test" << std::endl;
+    Range old_keep = {length-threshold,threshold}; // which voxels in the row 
+    // Range old_keep_1 = {0,length};//which row in the slide 
+    // Range old_keep_2 = {0,length};//which slide in the volume 
+
+    Range new_shift = {0,length-threshold}; // which voxels in the row 
+    // Range new_shift_1 = {0,length};//which row in the slide 
+    // Range new_shift_2 = {0,length};//which slide in the volume 
+
+    Range new_create = {threshold,length};
+    // Range new_create_1 = {0,length};//which row in the slide 
+    // Range new_create_2 = {0,length};//which slide in the volume 
+
+    Range row_range = {0,length};//which row in the slide 
+    Range slide_range = {0,length};//which slide in the volume 
+
+    for (int i = slide_range.start; i < slide_range.end; i++ ){// which voxels in the row 
+        for(int j = row_range.start; j<row_range.end;j++){//which row in the slide 
+            //copy and past the old data 
+            int k_old = old_keep.start; 
+            int k_new = new_shift.start;
+            for(;k_old < old_keep.end && k_new < new_shift.end; k_old++, k_new++){//which slide in the volume     
+                int index_old = i * length * length + j * length + k_old;
+                int index_new = i * length * length + j * length + k_new;
+                new_volume.at<Voxel>(0,index_new) = volume.at<Voxel>(0,index_old);
+            }
+            //initialize the new data 
+            for (int k_create = new_create.start; k_create < new_create.end; k_create++){
+                int index_create = i * length * length + j * length + k_create;
+                new_volume.at<Voxel>(0,index_create).v = 0;
+                new_volume.at<Voxel>(0,index_create).weight = 0;
+            }
+        }
+    }
+    //update the volume
+    volume = new_volume;
+
        
         
+}
+
+void TSDFVolumeCPU::front_test2(){
+    using namespace std;
+    float length = 500;
+    float threshold = 100;
+    Mat new_volume = Mat(1,length*length*length,rawType<Voxel>());
+
+    cout << "the tsdf position is " << pose.translation()[0] << ", " <<  pose.translation()[1] << ", " <<  pose.translation()[2] << endl;
+    // cout << "use matrix express" << pose.matrix[0][3] = 5 << endl;
+    Vec3f tran_vec(0,0,-0.2);
+ 
+    pose = pose.translate(tran_vec);
+
+    cout << "the tsdf position is " << pose.translation()[0] << ", " <<  pose.translation()[1] << ", " <<  pose.translation()[2] << endl;
+
+    Range old_keep = {0,length-threshold}; // which voxels in the row 
+
+    Range new_shift = {threshold,length}; // which voxels in the row 
+
+    Range new_create = {0,threshold}; // which voxels in the row 
+
+    Range row_range = {0,length};//which row in the slide 
+    Range slide_range = {0,length};//which slide in the volume 
+
+    for (int i = slide_range.start; i < slide_range.end; i++ ){// which voxels in the row 
+        for(int j = row_range.start; j<row_range.end;j++){//which row in the slide 
+            //copy and past the old data 
+            int k_old = old_keep.start; 
+            int k_new = new_shift.start;
+            for(;k_old < old_keep.end && k_new < new_shift.end; k_old++, k_new++){//which slide in the volume     
+                int index_old = i * length * length + j * length + k_old;
+                int index_new = i * length * length + j * length + k_new;
+                new_volume.at<Voxel>(0,index_new) = volume.at<Voxel>(0,index_old);
+            }
+            //initialize the new data 
+            for (int k_create = new_create.start; k_create < new_create.end; k_create++){
+                int index_create = i * length * length + j * length + k_create;
+                new_volume.at<Voxel>(0,index_create).v = 0;
+                new_volume.at<Voxel>(0,index_create).weight = 0;
+            }
+        }
+    }
+    //update the volume
+    volume = new_volume;
 }
 
 void TSDFVolumeCPU::map_ignore_test(std::vector<bool> dir_arr, float threshold){
@@ -158,6 +258,11 @@ void TSDFVolumeCPU::map_ignore_test(std::vector<bool> dir_arr, float threshold){
     switch (dir)
     {
     case direction::right:{
+        // //shift the map 
+        // Vec3f translation_vec = (0.15,0,0);
+        // pose = pose.translate(translation_vec);
+        // std::cout<< "we use the map indipendent shift--right_shift" << std::endl;
+        //do the calculation 
         int delete_old_start = 0;
         int delete_old_end = length*length*(threshold);
         int keep_old_start = delete_old_end;
@@ -230,6 +335,11 @@ void TSDFVolumeCPU::map_ignore_test(std::vector<bool> dir_arr, float threshold){
         break;
     }
     case direction::front:{
+        // //shift the map 
+        // Vec3f translation_vec = (0,0,0.15);
+        // pose = pose.translate(translation_vec);
+        // std::cout<< "we use the map indipendent shift--front_shift" << std::endl;
+        //do the calculation 
         std::cout << "this is the front movement test" << std::endl;
         Range old_keep = {length-threshold,threshold}; // which voxels in the row 
         // Range old_keep_1 = {0,length};//which row in the slide 
@@ -266,46 +376,6 @@ void TSDFVolumeCPU::map_ignore_test(std::vector<bool> dir_arr, float threshold){
         }
         //update the volume
         volume = new_volume;
-        //-------------------------------------------------------------------------------------------
-        // threshold = 100;
-        // Range new_create_range_each = {0,length*threshold};
-        // Range new_shift_range_each = {length*threshold,length*length};
-        // Range old_shift_range_each = {0,length*(length-threshold)};
-         
-
-        // for (int j = 0; j < length; j++){
-        //     if (j!=0){
-        //     //update new_create_range_each
-        //     new_create_range_each.start += length*length;
-        //     new_create_range_each.end += length*length;
-        //     //update new_shift_range_each 
-        //     new_shift_range_each.start += length*length;
-        //     new_shift_range_each.end += length*length;
-        //     //update old_shift_range_each 
-        //     old_shift_range_each.start += length*length;
-        //     old_shift_range_each.end += length*length;
-        //     // std::cout << "test---------------here" << std::endl;
-        //     }
-
-        //     //shift old value from old volume to the new volume 
-        //     int o_i = old_shift_range_each.start;
-        //     int n_i = new_shift_range_each.start;
-        //     for (; o_i < old_shift_range_each.end && n_i < new_shift_range_each.end; o_i++, n_i++){
-        //         new_volume.at<Voxel>(0,n_i).v = volume.at<Voxel>(0,o_i).v;
-        //         new_volume.at<Voxel>(0,n_i).weight = volume.at<Voxel>(0,o_i).weight;
-        //         // new_volume.at<Voxel>(0,n_i).v = 0;
-        //         // new_volume.at<Voxel>(0,n_i).weight = 0;
-        //         // new_volume.at<Voxel>(0,n_i).v = NAN;
-        //     }
-        //     //set the v and weight value to be default 0
-        //     for (int i = new_create_range_each.start; i < new_create_range_each.end; i++){
-        //         new_volume.at<Voxel>(0,i).v = 0;
-        //         new_volume.at<Voxel>(0,i).weight = 0;
-        //     }
-             
-             
-        // }
-        // volume = new_volume;
         break;
     }
 
@@ -343,47 +413,6 @@ void TSDFVolumeCPU::map_ignore_test(std::vector<bool> dir_arr, float threshold){
         //update the volume
         volume = new_volume;
         break;
-
-
-        // Range new_create_range_each = {length*(length-threshold),length*length};
-        // Range new_shift_range_each = {0,length*(length-threshold)};
-        // Range old_shift_range_each = {threshold*length,length*length};
-         
-
-        // for (int j = 0; j < length; j++){
-        //     if (j!=0){
-        //     //update new_create_range_each
-        //     new_create_range_each.start += length*length;
-        //     new_create_range_each.end += length*length;
-        //     //update new_shift_range_each 
-        //     new_shift_range_each.start += length*length;
-        //     new_shift_range_each.end += length*length;
-        //     //update old_shift_range_each 
-        //     old_shift_range_each.start += length*length;
-        //     old_shift_range_each.end += length*length;
-        //     // std::cout << "test---------------here" << std::endl;
-        //     }
-
-        //     //shift old value from old volume to the new volume 
-        //     int o_i = old_shift_range_each.start;
-        //     int n_i = new_shift_range_each.start;
-        //     for (; o_i < old_shift_range_each.end && n_i < new_shift_range_each.end; o_i++, n_i++){
-        //         new_volume.at<Voxel>(0,n_i).v = volume.at<Voxel>(0,o_i).v;
-        //         new_volume.at<Voxel>(0,n_i).weight = volume.at<Voxel>(0,o_i).weight;
-        //         // new_volume.at<Voxel>(0,n_i).v = 0;
-        //         // new_volume.at<Voxel>(0,n_i).weight = 0;
-        //         // new_volume.at<Voxel>(0,n_i).v = NAN;
-        //     }
-        //     //set the v and weight value to be default 0
-        //     for (int i = new_create_range_each.start; i < new_create_range_each.end; i++){
-        //         new_volume.at<Voxel>(0,i).v = 0;
-        //         new_volume.at<Voxel>(0,i).weight = 0;
-        //     }
-             
-             
-        // }
-        // volume = new_volume;
-        // break;
     }
     default:
         break;

@@ -569,10 +569,8 @@ static bool ocl_buildPyramidPointsNormals(const UMat points, const UMat normals,
 void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, Affine3f lightPose)
 {
     CV_TRACE_FUNCTION();
-
     CV_Assert(_points.size().area() > 0);
     CV_Assert(_points.size() == _normals.size());
-
     Size sz = _points.size();
     image.create(sz, CV_8UC4);
 

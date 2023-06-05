@@ -32,6 +32,7 @@ public:
 
     virtual void map_ignore_test(std::vector<bool>dir_arr, float threshold) = 0;//-----------------modification 
     virtual void front_test() = 0;
+    virtual void front_test2() = 0;
 
     virtual ~TSDFVolume() { }
 
