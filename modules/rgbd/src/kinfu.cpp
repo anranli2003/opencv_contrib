@@ -47,12 +47,12 @@ Ptr<Params> Params::defaultParams()
     p.tsdf_min_camera_movement = 0.f; //meters, disabled
 
     p.volumeDims = Vec3i::all(500); //number of voxels //<<---------------------------------------modification 
-    float volSize = 1.f; //<<---------------------------------------modification 
+    float volSize = 3.f; //<<---------------------------------------modification 
     p.voxelSize = volSize/500.f; //meters //<<---------------------------------------modification 
 
     // default pose of volume cube
     // p.volumePose = Affine3f().translate(Vec3f(-volSize/2.f, -volSize/2.f, 0.5f));
-    p.volumePose = Affine3f().translate(Vec3f(-0.5f, -0.4f,0.7f));//<<---------------------------------------modification 
+    p.volumePose = Affine3f().translate(Vec3f(-1.5f, -1.4f,0.7f));//<<---------------------------------------modification 
 
     
     //------------------------------------------------------------------modification
@@ -482,17 +482,18 @@ bool KinFuImpl<T>::updateT(const T& _depth)
 
         // using namespace std;
         // cout << "the size of pyrPoints is " << pyrPoints[0].size()<< ", "<< pyrPoints[1].size() <<", " << pyrPoints[2].size() <<", "<< endl;
-        if(!success){
-            std::cout << "--------------------------------!!!--------------------------------" << std::endl;
-            return false;
-        }
+        // if(!success){
+        //     std::cout << "--------------------------------!!!--------------------------------" << std::endl;
+        //     return false;
+        // }
         using namespace std;
 
         float x_position = pose.translation()[0];//-------------------------modification 
         float z_position = pose.translation()[2];//-------------------------modification 
         // cout << "the old one is " << z_position << endl;
-        pose = pose * affine;
 
+        pose = pose * affine;
+        // pose = Affine3f::Identity();
         //------------------------------------------------------------------------------modification-----ignore the noise
         float new_x_posisition = pose.translation()[0];
         float new_z_posisition = pose.translation()[2];
