@@ -22,29 +22,29 @@ public:
 
     virtual void integrate(InputArray _depth, const Semantic& _semantic, float depthFactor, cv::Affine3f cameraPose, cv::kinfu::Intr intrinsics) = 0;
     virtual void raycast(cv::Affine3f cameraPose, cv::kinfu::Intr intrinsics, cv::Size frameSize,
-                         cv::OutputArray points, cv::OutputArray normals) const = 0;
+                         cv::OutputArray points, cv::OutputArray normals, cv::OutputArray _voxelClass) const = 0;
 
     virtual void fetchPointsNormals(cv::OutputArray points, cv::OutputArray normals) const = 0;
     virtual void fetchNormals(cv::InputArray points, cv::OutputArray _normals) const = 0;
-
     virtual void reset() = 0;
-
+        
     virtual ~TSDFVolume() { }
-
+    
+    //cv::Mat maxIndexMat;
     float voxelSize;
     float voxelSizeInv;
     Point3i volResolution;
     int maxWeight;
     cv::Affine3f pose;
     float raycastStepFactor;
-
     Point3f volSize;
     float truncDist;
     Vec4i volDims;
     Vec8i neighbourCoords;
 };
 
-cv::Ptr<TSDFVolume> makeTSDFVolume(Point3i _res,  float _voxelSize, cv::Affine3f _pose, float _truncDist, int _maxWeight,
+
+cv::Ptr<TSDFVolume> makeTSDFVolume(Point3i _res, float _voxelSize, cv::Affine3f _pose, float _truncDist, int _maxWeight,
                                    float _raycastStepFactor);
 
 } // namespace kinfu

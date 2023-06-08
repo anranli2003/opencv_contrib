@@ -14,8 +14,7 @@ namespace kinfu {
 
 static void computePointsNormals(const cv::kinfu::Intr, float depthFactor, const Depth, Points, Normals );
 static Depth pyrDownBilateral(const Depth depth, float sigma);
-static void pyrDownPointsNormals(const Points p, const Normals n, Points& pdown, Normals& ndown);
-
+void pyrDownPointsNormals(const Points p, const Normals n, Points &pdown, Normals &ndown);
 template<int p>
 inline float specPow(float x)
 {
@@ -45,14 +44,14 @@ inline float specPow<1>(float x)
 
 struct RenderInvoker : ParallelLoopBody
 {
-    RenderInvoker(const Points& _points, const Normals& _normals, Mat_<Vec4b>& _img, Affine3f _lightPose, Size _sz, int max_index) :
+    RenderInvoker(const Points& _points, const Normals& _normals, const VoxelClass& _index,  Mat_<Vec4b>& _img, Affine3f _lightPose, Size _sz) :
         ParallelLoopBody(),
         points(_points),
         normals(_normals),
+        index(_index),
         img(_img),
         lightPose(_lightPose),
-        sz(_sz),
-        max_index(max_index)
+        sz(_sz)
     { }
 
     virtual void operator ()(const Range& range) const override
@@ -62,12 +61,13 @@ struct RenderInvoker : ParallelLoopBody
             Vec4b* imgRow = img[y];
             const ptype* ptsRow = points[y];
             const ptype* nrmRow = normals[y];
+            const int* idxRow = index[y]; // Added line to access index matrix
 
             for(int x = 0; x < sz.width; x++)
             {
                 Point3f p = fromPtype(ptsRow[x]);
                 Point3f n = fromPtype(nrmRow[x]);
-
+                int max_index = static_cast<int>(idxRow[x]); // added this for max
                 Vec4b color;
 
                 if(isNaN(p))
@@ -173,11 +173,11 @@ struct RenderInvoker : ParallelLoopBody
 
     const Points& points;
     const Normals& normals;
+    const VoxelClass& index;
     Mat_<Vec4b>& img;
     Affine3f lightPose;
     Size sz;
-    int max_index;
-     };
+    };
 
 
      
@@ -260,6 +260,7 @@ void pyrDownPointsNormals(const Points p, const Normals n, Points &pdown, Normal
         const ptype* pUpRow1 = p[2*y+1];
         const ptype* nUpRow0 = n[2*y];
         const ptype* nUpRow1 = n[2*y+1];
+
         for(int x = 0; x < pdown.cols; x++)
         {
             Point3f point = nan3, normal = nan3;
@@ -279,6 +280,7 @@ void pyrDownPointsNormals(const Points p, const Normals n, Points &pdown, Normal
                 Point3f n11 = fromPtype(nUpRow1[2*x+1]);
 
                 normal = (n00 + n01 + n10 + n11)*0.25f;
+
             }
 
             ptsRow[x] = toPtype(point);
@@ -286,6 +288,7 @@ void pyrDownPointsNormals(const Points p, const Normals n, Points &pdown, Normal
         }
     }
 }
+
 
 struct PyrDownBilateralInvoker : ParallelLoopBody
 {
@@ -445,6 +448,9 @@ void computePointsNormals(const Intr intr, float depthFactor, const Depth depth,
 
 static bool ocl_renderPointsNormals(const UMat points, const UMat normals, UMat image, Affine3f lightPose);
 static bool ocl_makeFrameFromDepth(const UMat depth, OutputArrayOfArrays points, OutputArrayOfArrays normals,
+                                   const Intr intr, int levels, float depthFactor,
+                                   float sigmaDepth, float sigmaSpatial, int kernelSize);
+static bool ocl_makeFrameFromDepth(const UMat depth, OutputArrayOfArrays points, OutputArrayOfArrays normals, OutputArrayOfArrays classes,
                                    const Intr intr, int levels, float depthFactor,
                                    float sigmaDepth, float sigmaSpatial, int kernelSize);
 static bool ocl_buildPyramidPointsNormals(const UMat points, const UMat normals,
@@ -630,6 +636,55 @@ static bool ocl_renderPointsNormals(const UMat points, const UMat normals,
 }
 
 
+// THIS IS JUST A COPY PASTE OF THE BELOW
+static bool ocl_makeFrameFromDepth(const UMat depth, OutputArrayOfArrays points, OutputArrayOfArrays normals, OutputArrayOfArrays classes,
+                                   const Intr intr, int levels, float depthFactor,
+                                   float sigmaDepth, float sigmaSpatial, int kernelSize)
+{
+    CV_TRACE_FUNCTION();
+
+    // looks like OpenCV's bilateral filter works the same as KinFu's
+    UMat smooth;
+    //TODO: fix that
+    // until 32f isn't implemented in OpenCV, we should use our workarounds
+    //bilateralFilter(udepth, smooth, kernelSize, sigmaDepth*depthFactor, sigmaSpatial);
+    if(!customBilateralFilterGpu(depth, smooth, kernelSize, sigmaDepth*depthFactor, sigmaSpatial))
+        return  false;
+
+    // depth truncation is not used by default
+    //if (p.icp_truncate_depth_dist > 0) kfusion::cuda::depthTruncation(curr_.depth_pyr[0], p.icp_truncate_depth_dist);
+
+    UMat scaled = smooth;
+    Size sz = smooth.size();
+    // First do the classes
+    classes.create(1, 1, POINT_TYPE);
+    UMat& c = classes.getUMatRef(0);
+    c.create(sz, POINT_TYPE);
+    // Do the rest
+    points.create(levels, 1, POINT_TYPE);
+    normals.create(levels, 1, POINT_TYPE);
+    for(int i = 0; i < levels; i++)
+    {
+        UMat& p = points.getUMatRef(i);
+        UMat& n = normals.getUMatRef(i);
+        p.create(sz, POINT_TYPE);
+        n.create(sz, POINT_TYPE);
+
+        if(!computePointsNormalsGpu(intr.scale(i), depthFactor, scaled, p, n))
+            return false;
+
+        if(i < levels - 1)
+        {
+            sz.width /= 2, sz.height /= 2;
+            UMat halfDepth(sz, DEPTH_TYPE);
+            pyrDownBilateralGpu(scaled, halfDepth, sigmaDepth*depthFactor);
+            scaled = halfDepth;
+        }
+    }
+
+    return true;
+}
+
 static bool ocl_makeFrameFromDepth(const UMat depth, OutputArrayOfArrays points, OutputArrayOfArrays normals,
                                    const Intr intr, int levels, float depthFactor,
                                    float sigmaDepth, float sigmaSpatial, int kernelSize)
@@ -707,7 +762,7 @@ static bool ocl_buildPyramidPointsNormals(const UMat points, const UMat normals,
 
 #endif 
 
-void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, Affine3f lightPose, int max_index) // int max_index
+void renderPointsNormals(InputArray _points, InputArray _normals, InputArray _voxelClass, OutputArray image, Affine3f lightPose)
 {
     CV_TRACE_FUNCTION();
 
@@ -724,13 +779,62 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 
     Points  points  = _points.getMat();
     Normals normals = _normals.getMat();
-
+    VoxelClass index = _voxelClass.getMat();
     Mat_<Vec4b> img = image.getMat();
 
-    RenderInvoker ri(points, normals, img, lightPose, sz, max_index); // max_index
+    RenderInvoker ri(points, normals, index, img, lightPose, sz);
     Range range(0, sz.height);
     const int nstripes = -1;
     parallel_for_(range, ri, nstripes);
+}
+
+
+
+void makeFrameFromDepth(InputArray _depth,
+                        OutputArray pyrPoints, OutputArray pyrNormals, OutputArray pyrClasses,
+                        const Intr intr, int levels, float depthFactor,
+                        float sigmaDepth, float sigmaSpatial, int kernelSize)
+{
+    CV_TRACE_FUNCTION();
+
+    CV_Assert(_depth.type() == DEPTH_TYPE);
+
+    CV_OCL_RUN(_depth.isUMat() && pyrPoints.isUMatVector() && pyrNormals.isUMatVector() && pyrClasses.isUMatVector(),
+               ocl_makeFrameFromDepth(_depth.getUMat(), pyrPoints, pyrNormals, pyrClasses,
+                                      intr, levels, depthFactor,
+                                      sigmaDepth, sigmaSpatial, kernelSize));
+    
+    // IF NOT OCL, THEN RUN NORMALLY
+    makeFrameFromDepth(_depth, pyrPoints, pyrNormals, intr, levels, depthFactor, sigmaDepth, sigmaSpatial, kernelSize);
+
+    int kc = pyrClasses.kind();
+    CV_Assert(kc == _InputArray::STD_ARRAY_MAT || kc == _InputArray::STD_VECTOR_MAT);
+
+    ///////////////// THis section can be simplified be referencing the pyrNormals or pyrPoints output for the first level
+    ///////////////// but let's be lazy for now -- adam
+    Depth depth = _depth.getMat();
+
+    // looks like OpenCV's bilateral filter works the same as KinFu's
+    Depth smooth;
+
+    //TODO: remove it when OpenCV's bilateral works properly
+    patchNaNs(depth);
+
+    bilateralFilter(depth, smooth, kernelSize, sigmaDepth*depthFactor, sigmaSpatial);
+
+    // depth truncation is not used by default
+    //if (p.icp_truncate_depth_dist > 0) kfusion::cuda::depthTruncation(curr_.depth_pyr[0], p.icp_truncate_depth_dist);
+
+    // we don't need depth pyramid outside this method
+    // if we do, the code is to be refactored
+
+    Depth scaled = smooth;
+    Size sz = smooth.size();
+    //////////////////// end lazy section
+
+    // First create the classes output since we only care to have one level
+    pyrClasses.create(1, 1, POINT_TYPE);
+    pyrClasses.create(sz, POINT_TYPE, 1);
 }
 
 
@@ -816,22 +920,22 @@ void buildPyramidPointsNormals(InputArray _points, InputArray _normals,
     pyrPoints .create(levels, 1, POINT_TYPE);
     pyrNormals.create(levels, 1, POINT_TYPE);
 
+
     pyrPoints .getMatRef(0) = p0;
     pyrNormals.getMatRef(0) = n0;
+
 
     Size sz = _points.size();
     for(int i = 1; i < levels; i++)
     {
         Points  p1 = pyrPoints .getMat(i-1);
         Normals n1 = pyrNormals.getMat(i-1);
-
         sz.width /= 2; sz.height /= 2;
 
         pyrPoints .create(sz, POINT_TYPE, i);
         pyrNormals.create(sz, POINT_TYPE, i);
         Points  pd = pyrPoints. getMatRef(i);
         Normals nd = pyrNormals.getMatRef(i);
-
         pyrDownPointsNormals(p1, n1, pd, nd);
     }
 }

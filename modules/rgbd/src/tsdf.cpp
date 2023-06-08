@@ -11,6 +11,8 @@
 #include <cstring>
 
 const int K = 57;
+
+
 namespace cv {
 
 namespace kinfu {
@@ -23,7 +25,7 @@ struct Voxel
 {
     volumeType v;
     int weight;
-    std::array<float,57> semantic_weights;
+    std::array<int,6> semantic_weights;
 };
 
 typedef Vec<uchar, sizeof(Voxel)> VecT;
@@ -33,27 +35,79 @@ class TSDFVolumeCPU : public TSDFVolume
 {
 public:
     // dimension in voxels, size in meters
-    TSDFVolumeCPU(Point3i _res, float _voxelSize, cv::Affine3f _pose, float _truncDist, int _maxWeight,
+    TSDFVolumeCPU (Point3i _res, float _voxelSize, cv::Affine3f _pose, float _truncDist, int _maxWeight,
                   float _raycastStepFactor, bool zFirstMemOrder = true);
     
     
     virtual void integrate(InputArray _depth, const Semantic& _semantic, float depthFactor, cv::Affine3f cameraPose, cv::kinfu::Intr intrinsics) override;
 
 
-    virtual void raycast(cv::Affine3f cameraPose, cv::kinfu::Intr intrinsics, cv::Size frameSize,
-                         cv::OutputArray points, cv::OutputArray normals) const override;
+    virtual void raycast(cv::Affine3f cameraPose, Intr intrinsics, Size frameSize,
+                            cv::OutputArray _points, cv::OutputArray _normals, cv::OutputArray _voxelClass) const override;
 
     virtual void fetchNormals(cv::InputArray points, cv::OutputArray _normals) const override;
     virtual void fetchPointsNormals(cv::OutputArray points, cv::OutputArray normals) const override;
-
+    
     virtual void reset() override;
 
     volumeType interpolateVoxel(cv::Point3f p) const;
+    volumeType getVoxelClass(Point3f p) const;
     Point3f getNormalVoxel(cv::Point3f p) const;
 
 #if USE_INTRINSICS
     volumeType interpolateVoxel(const v_float32x4& p) const;
+    volumeType getVoxelClass(const v_float32x4& p) const;
     v_float32x4 getNormalVoxel(const v_float32x4& p) const;
+#endif// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
+
+// This code is also subject to the license terms in the LICENSE_KinectFusion.md file found in this module's directory
+
+#ifndef __OPENCV_KINFU_TSDF_H__
+#define __OPENCV_KINFU_TSDF_H__
+
+#include "kinfu_frame.hpp"
+
+namespace cv {
+namespace kinfu {
+
+
+class TSDFVolume
+{
+public:
+    // dimension in voxels, size in meters
+    TSDFVolume(Point3i _res, float _voxelSize, cv::Affine3f _pose, float _truncDist, int _maxWeight,
+               float _raycastStepFactor, bool zFirstMemOrder = true);
+
+    virtual void integrate(InputArray _depth, const Semantic& _semantic, float depthFactor, cv::Affine3f cameraPose, cv::kinfu::Intr intrinsics) = 0;
+    virtual void raycast(cv::Affine3f cameraPose, Intr intrinsics, Size frameSize,
+                            cv::OutputArray _points, cv::OutputArray _normals, cv::OutputArray _voxelClass) const = 0;
+
+    virtual void fetchPointsNormals(cv::OutputArray points, cv::OutputArray normals) const = 0;
+    virtual void fetchNormals(cv::InputArray points, cv::OutputArray _normals) const = 0;
+    virtual void reset() = 0;
+        
+    //cv::Mat maxIndexMat;
+    virtual ~TSDFVolume() { }
+    float voxelSize;
+    float voxelSizeInv;
+    Point3i volResolution;
+    int maxWeight;
+    cv::Affine3f pose;
+    float raycastStepFactor;
+    Point3f volSize;
+    float truncDist;
+    Vec4i volDims;
+    Vec8i neighbourCoords;
+};
+
+
+cv::Ptr<TSDFVolume> makeTSDFVolume(Point3i _res, float _voxelSize, cv::Affine3f _pose, float _truncDist, int _maxWeight,
+                                   float _raycastStepFactor);
+
+} // namespace kinfu
+} // namespace cv
 #endif
 
     // See zFirstMemOrder arg of parent class constructor
@@ -118,7 +172,9 @@ TSDFVolumeCPU::TSDFVolumeCPU(Point3i _res, float _voxelSize, cv::Affine3f _pose,
     TSDFVolume(_res, _voxelSize, _pose, _truncDist, _maxWeight, _raycastStepFactor, zFirstMemOrder)
 {
     volume = Mat(1, volResolution.x * volResolution.y * volResolution.z, rawType<Voxel>());
-
+    Scalar zeros(0);
+    //maxIndexMat = Mat(volResolution.x, volResolution.y, CV_32S, zeros);
+    
     reset();
 }
 
@@ -126,15 +182,12 @@ TSDFVolumeCPU::TSDFVolumeCPU(Point3i _res, float _voxelSize, cv::Affine3f _pose,
 void TSDFVolumeCPU::reset()
 {
     CV_TRACE_FUNCTION();
-
     volume.forEach<VecT>([](VecT& vv, const int* /* position */)
     {
         Voxel& v = reinterpret_cast<Voxel&>(vv);
         v.v = 0; v.weight = 0;
         
-        v.semantic_weights = {0.0f};
-        
-        //v.semantic_weights = std::vector<float>(K, 0.0);
+        v.semantic_weights = {0};
 
     });
 }
@@ -394,73 +447,109 @@ struct IntegrateInvoker : ParallelLoopBody
 
 
                         //update semantic vector
-                        voxel.semantic_weights[m] += 1;
-
-                        std::cout << "element in semantic_weights array: " << std::endl;
-                        for(int i = 0 ; i < 57 ; ++i){
-                            std::cout << i+1 << "th element: " << voxel.semantic_weights[i] << std::endl;
+                        if(m >= 0 && m < 10){
+                            voxel.semantic_weights[0]+=1;
+                        }                  
+                        if(m >= 10 && m < 20){
+                            voxel.semantic_weights[1]+=1;
+                        } 
+                        if(m >= 20 && m < 30){
+                            voxel.semantic_weights[2]+=1;
+                        } 
+                        if(m >= 30 && m < 40){
+                            voxel.semantic_weights[3]+=1;
+                        } 
+                        if(m >= 40 && m < 50){
+                            voxel.semantic_weights[4]+=1;
                         }
+                        if(m >= 50 && m < 57){
+                            voxel.semantic_weights[5]+=1;
+                        }  
+                        int maxidx = 0;
+                        for (int i = 0; i < voxel.semantic_weights.size(); ++i) {
+                            if (voxel.semantic_weights[i] > voxel.semantic_weights[maxidx]) {
+                                maxidx = i;
+                            }
+                        }
+                        //volume.maxIndexMat.at<int>(y, x) = maxidx;
+
+                        // for (int y = 0; y < volume.maxIndexMat.rows; y++) {
+                        //     for (int x = 0; x < volume.maxIndexMat.cols; x++) {
+                        //         int value = volume.maxIndexMat.at<int>(y, x);
+                        //         std::cout << value << " ";
+                        //     }
+                        //     std::cout << std::endl;
+                        // }
+                        
+                        //std::cout << "m =  " << m << std::endl;
+                        // for(int i = 0 ; i < 6 ; ++i){
+                        //     if(voxel.semantic_weights[i]>1){
+                        //     std::cout << i<< "th element: " << voxel.semantic_weights[i] << std::endl;
+                        //     }
+                        //}
+                        //std::cout << "max index =  " << maxidx << std::endl;
+
 
                     }
                 }
             }
         }
         // Gaussian Convolution
-        printf("Doing Gaussian Convolution...");
-        for(int x = range.start + 1; x < range.end - 1; x++){
-            Voxel* volDataX = volDataStart + x*volume.volDims[0];
-            Voxel* volDataX_left = volDataStart + (x-1)*volume.volDims[0];
-            Voxel* volDataX_right = volDataStart + (x+1)*volume.volDims[0];
-            for(int y = 1; y < volume.volResolution.y - 1; y++){
-                Voxel* volDataY = volDataX+y*volume.volDims[1];
-                Voxel* volDataY_left = volDataX_left+y*volume.volDims[1];
-                Voxel* volDataY_right = volDataX_right+y*volume.volDims[1];
-                Voxel* volDataY_above = volDataX+(y+1)*volume.volDims[1];
-                Voxel* volDataY_below = volDataX+(y-1)*volume.volDims[1];
-                Voxel* volDataY_above_left = volDataX_left+(y+1)*volume.volDims[1];
-                Voxel* volDataY_below_left = volDataX_left+(y-1)*volume.volDims[1];
-                Voxel* volDataY_above_right = volDataX_right+(y+1)*volume.volDims[1];
-                Voxel* volDataY_below_right = volDataX_right+(y-1)*volume.volDims[1];
-                for(int z = 1; z < volume.volResolution.z - 1; z++){
-                    Voxel& voxel = volDataY[z*volume.volDims[2]];
-                    Voxel& voxel_behind = volDataY[(z+1)*volume.volDims[2]];
-                    Voxel& voxel_front = volDataY[(z-1)*volume.volDims[2]];
-                    Voxel& voxel_left = volDataY_left[z*volume.volDims[2]];
-                    Voxel& voxel_right = volDataY_right[z*volume.volDims[2]];
-                    Voxel& voxel_behind_left = volDataY_left[(z+1)*volume.volDims[2]];
-                    Voxel& voxel_behind_right = volDataY_right[(z+1)*volume.volDims[2]];
-                    Voxel& voxel_front_left = volDataY_left[(z-1)*volume.volDims[2]];  
-                    Voxel& voxel_front_right = volDataY_right[(z-1)*volume.volDims[2]];
+        // printf("Doing Gaussian Convolution...");
+        // for(int x = range.start + 1; x < range.end - 1; x++){
+        //     Voxel* volDataX = volDataStart + x*volume.volDims[0];
+        //     Voxel* volDataX_left = volDataStart + (x-1)*volume.volDims[0];
+        //     Voxel* volDataX_right = volDataStart + (x+1)*volume.volDims[0];
+        //     for(int y = 1; y < volume.volResolution.y - 1; y++){
+        //         Voxel* volDataY = volDataX+y*volume.volDims[1];
+        //         Voxel* volDataY_left = volDataX_left+y*volume.volDims[1];
+        //         Voxel* volDataY_right = volDataX_right+y*volume.volDims[1];
+        //         Voxel* volDataY_above = volDataX+(y+1)*volume.volDims[1];
+        //         Voxel* volDataY_below = volDataX+(y-1)*volume.volDims[1];
+        //         Voxel* volDataY_above_left = volDataX_left+(y+1)*volume.volDims[1];
+        //         Voxel* volDataY_below_left = volDataX_left+(y-1)*volume.volDims[1];
+        //         Voxel* volDataY_above_right = volDataX_right+(y+1)*volume.volDims[1];
+        //         Voxel* volDataY_below_right = volDataX_right+(y-1)*volume.volDims[1];
+        //         for(int z = 1; z < volume.volResolution.z - 1; z++){
+        //             Voxel& voxel = volDataY[z*volume.volDims[2]];
+        //             Voxel& voxel_behind = volDataY[(z+1)*volume.volDims[2]];
+        //             Voxel& voxel_front = volDataY[(z-1)*volume.volDims[2]];
+        //             Voxel& voxel_left = volDataY_left[z*volume.volDims[2]];
+        //             Voxel& voxel_right = volDataY_right[z*volume.volDims[2]];
+        //             Voxel& voxel_behind_left = volDataY_left[(z+1)*volume.volDims[2]];
+        //             Voxel& voxel_behind_right = volDataY_right[(z+1)*volume.volDims[2]];
+        //             Voxel& voxel_front_left = volDataY_left[(z-1)*volume.volDims[2]];  
+        //             Voxel& voxel_front_right = volDataY_right[(z-1)*volume.volDims[2]];
 
-                    Voxel& voxel_above = volDataY_above[z*volume.volDims[2]];
-                    Voxel& voxel_above_left = volDataY_above_left[z*volume.volDims[2]];
-                    Voxel& voxel_above_right = volDataY_above_right[z*volume.volDims[2]];
-                    Voxel& voxel_behind_above = volDataY_above[(z+1)*volume.volDims[2]];
-                    Voxel& voxel_front_above = volDataY_above[(z-1)*volume.volDims[2]];
-                    Voxel& voxel_behind_above_left = volDataY_above_left[(z+1)*volume.volDims[2]];
-                    Voxel& voxel_front_above_left = volDataY_above_left[(z-1)*volume.volDims[2]];
-                    Voxel& voxel_behind_above_right = volDataY_above_right[(z+1)*volume.volDims[2]];
-                    Voxel& voxel_front_above_right = volDataY_above_right[(z-1)*volume.volDims[2]];
+        //             Voxel& voxel_above = volDataY_above[z*volume.volDims[2]];
+        //             Voxel& voxel_above_left = volDataY_above_left[z*volume.volDims[2]];
+        //             Voxel& voxel_above_right = volDataY_above_right[z*volume.volDims[2]];
+        //             Voxel& voxel_behind_above = volDataY_above[(z+1)*volume.volDims[2]];
+        //             Voxel& voxel_front_above = volDataY_above[(z-1)*volume.volDims[2]];
+        //             Voxel& voxel_behind_above_left = volDataY_above_left[(z+1)*volume.volDims[2]];
+        //             Voxel& voxel_front_above_left = volDataY_above_left[(z-1)*volume.volDims[2]];
+        //             Voxel& voxel_behind_above_right = volDataY_above_right[(z+1)*volume.volDims[2]];
+        //             Voxel& voxel_front_above_right = volDataY_above_right[(z-1)*volume.volDims[2]];
 
-                    Voxel& voxel_below = volDataY_below[z*volume.volDims[2]];
-                    Voxel& voxel_below_left = volDataY_below_left[z*volume.volDims[2]];
-                    Voxel& voxel_below_right = volDataY_below_right[z*volume.volDims[2]];
-                    Voxel& voxel_behind_below = volDataY_below[(z+1)*volume.volDims[2]];
-                    Voxel& voxel_front_below = volDataY_below[(z-1)*volume.volDims[2]];
-                    Voxel& voxel_behind_below_left = volDataY_below_left[(z+1)*volume.volDims[2]];
-                    Voxel& voxel_front_below_left = volDataY_below_left[(z-1)*volume.volDims[2]];
-                    Voxel& voxel_behind_below_right = volDataY_below_right[(z+1)*volume.volDims[2]];
-                    Voxel& voxel_front_below_right = volDataY_below_right[(z-1)*volume.volDims[2]];
+        //             Voxel& voxel_below = volDataY_below[z*volume.volDims[2]];
+        //             Voxel& voxel_below_left = volDataY_below_left[z*volume.volDims[2]];
+        //             Voxel& voxel_below_right = volDataY_below_right[z*volume.volDims[2]];
+        //             Voxel& voxel_behind_below = volDataY_below[(z+1)*volume.volDims[2]];
+        //             Voxel& voxel_front_below = volDataY_below[(z-1)*volume.volDims[2]];
+        //             Voxel& voxel_behind_below_left = volDataY_below_left[(z+1)*volume.volDims[2]];
+        //             Voxel& voxel_front_below_left = volDataY_below_left[(z-1)*volume.volDims[2]];
+        //             Voxel& voxel_behind_below_right = volDataY_below_right[(z+1)*volume.volDims[2]];
+        //             Voxel& voxel_front_below_right = volDataY_below_right[(z-1)*volume.volDims[2]];
 
-                    volumeType& value = voxel.v;
-                    for (int i = 0; i < K; ++i){
-                        voxel.semantic_weights[i] = 0.09226132*voxel.semantic_weights[i] + 0.05595932*(voxel_left.semantic_weights[i] + voxel_right.semantic_weights[i] + voxel_above.semantic_weights[i] + voxel_below.semantic_weights[i] + voxel_front.semantic_weights[i] + voxel_behind.semantic_weights[i]) + 0.03394104*(voxel_above_left.semantic_weights[i] + voxel_above_right.semantic_weights[i] + voxel_below_left.semantic_weights[i] + voxel_below_right.semantic_weights[i] + voxel_front_left.semantic_weights[i] + voxel_front_right.semantic_weights[i] + voxel_behind_left.semantic_weights[i] + voxel_behind_right.semantic_weights[i] + voxel_front_above.semantic_weights[i] + voxel_front_below.semantic_weights[i] + voxel_behind_above.semantic_weights[i] + voxel_behind_below.semantic_weights[i]) + 0.02058628*(voxel_front_above_left.semantic_weights[i] + voxel_behind_above_left.semantic_weights[i] + voxel_behind_above_right.semantic_weights[i] + voxel_front_above_right.semantic_weights[i] + voxel_front_below_left.semantic_weights[i] + voxel_behind_below_left.semantic_weights[i] + voxel_behind_below_right.semantic_weights[i] + voxel_front_below_right.semantic_weights[i]);
-                    }
-                    value = 0.09226132*value + 0.05595932*(voxel_left.v + voxel_right.v + voxel_above.v + voxel_below.v + voxel_front.v + voxel_behind.v) + 0.03394104*(voxel_above_left.v + voxel_above_right.v + voxel_below_left.v + voxel_below_right.v + voxel_front_left.v + voxel_front_right.v + voxel_behind_left.v + voxel_behind_right.v + voxel_front_above.v + voxel_front_below.v + voxel_behind_above.v + voxel_behind_below.v) + 0.02058628*(voxel_front_above_left.v + voxel_behind_above_left.v + voxel_behind_above_right.v + voxel_front_above_right.v + voxel_front_below_left.v + voxel_behind_below_left.v + voxel_behind_below_right.v + voxel_front_below_right.v);
+        //             volumeType& value = voxel.v;
+        //             for (int i = 0; i < K; ++i){
+        //                 voxel.semantic_weights[i] = 0.09226132*voxel.semantic_weights[i] + 0.05595932*(voxel_left.semantic_weights[i] + voxel_right.semantic_weights[i] + voxel_above.semantic_weights[i] + voxel_below.semantic_weights[i] + voxel_front.semantic_weights[i] + voxel_behind.semantic_weights[i]) + 0.03394104*(voxel_above_left.semantic_weights[i] + voxel_above_right.semantic_weights[i] + voxel_below_left.semantic_weights[i] + voxel_below_right.semantic_weights[i] + voxel_front_left.semantic_weights[i] + voxel_front_right.semantic_weights[i] + voxel_behind_left.semantic_weights[i] + voxel_behind_right.semantic_weights[i] + voxel_front_above.semantic_weights[i] + voxel_front_below.semantic_weights[i] + voxel_behind_above.semantic_weights[i] + voxel_behind_below.semantic_weights[i]) + 0.02058628*(voxel_front_above_left.semantic_weights[i] + voxel_behind_above_left.semantic_weights[i] + voxel_behind_above_right.semantic_weights[i] + voxel_front_above_right.semantic_weights[i] + voxel_front_below_left.semantic_weights[i] + voxel_behind_below_left.semantic_weights[i] + voxel_behind_below_right.semantic_weights[i] + voxel_front_below_right.semantic_weights[i]);
+        //             }
+        //             value = 0.09226132*value + 0.05595932*(voxel_left.v + voxel_right.v + voxel_above.v + voxel_below.v + voxel_front.v + voxel_behind.v) + 0.03394104*(voxel_above_left.v + voxel_above_right.v + voxel_below_left.v + voxel_below_right.v + voxel_front_left.v + voxel_front_right.v + voxel_behind_left.v + voxel_behind_right.v + voxel_front_above.v + voxel_front_below.v + voxel_behind_above.v + voxel_behind_below.v) + 0.02058628*(voxel_front_above_left.v + voxel_behind_above_left.v + voxel_behind_above_right.v + voxel_front_above_right.v + voxel_front_below_left.v + voxel_behind_below_left.v + voxel_behind_below_right.v + voxel_front_below_right.v);
 
-                }
-            }
-        }
+        //         }
+        //     }
+        // }
     }
 #else
     virtual void operator() (const Range& range) const override
@@ -545,8 +634,28 @@ struct IntegrateInvoker : ParallelLoopBody
                         value = (value*weight+tsdf) / (weight + 1);
                         weight = min(weight + 1, volume.maxWeight);
  
-                        //update semantic vector                   
-                        voxel.semantic_weights[m]+=1;
+                        //update semantic vector 
+                        //voxel.semantic_weights[m]+=1;
+
+                        if(m >= 0 && m < 10){
+                            voxel.semantic_weights[0]+=1;
+                        }                  
+                        if(m >= 10 && m < 20){
+                            voxel.semantic_weights[1]+=1;
+                        } 
+                        if(m >= 20 && m < 30){
+                            voxel.semantic_weights[2]+=1;
+                        } 
+                        if(m >= 30 && m < 40){
+                            voxel.semantic_weights[3]+=1;
+                        } 
+                        if(m >= 40 && m < 50){
+                            voxel.semantic_weights[4]+=1;
+                        }
+                        if(m >= 50 && m < 57){
+                            voxel.semantic_weights[5]+=1;
+                        }  
+                        volume.maxIndexMat.at<int>(y, x) = maxidx;
 
 
                     }
@@ -639,8 +748,10 @@ void TSDFVolumeCPU::integrate(InputArray _depth, const Semantic& semantic, float
     IntegrateInvoker ii(*this, depth, semantic, intrinsics, cameraPose, depthFactor);
     Range range(0, volResolution.x);
     parallel_for_(range, ii);
+    
 
 }
+
 
 #if USE_INTRINSICS
 // all coordinate checks should be done in inclosing cycle
@@ -668,7 +779,8 @@ inline volumeType TSDFVolumeCPU::interpolateVoxel(const v_float32x4& p) const
     int iy = ip.get0(); ip = v_rotate_right<1>(ip);
     int iz = ip.get0();
 
-    int coordBase = ix*xdim + iy*ydim + iz*zdim;
+    int coordBase = ix*xdim + iy*ydim + iz*zdim; 
+    
 
     volumeType vx[8];
     for(int i = 0; i < 8; i++)
@@ -718,6 +830,115 @@ inline volumeType TSDFVolumeCPU::interpolateVoxel(Point3f p) const
     return v0 + tx*(v1 - v0);
 }
 #endif
+
+#if USE_INTRINSICS
+inline volumeType TSDFVolumeCPU::getVoxelClass(Point3f p) const
+{
+    v_float32x4 vp(p.x, p.y, p.z, 0.f);
+    return getVoxelClass(vp);
+}
+
+inline volumeType TSDFVolumeCPU::getVoxelClass(const v_float32x4& p) const
+{
+    // tx, ty, tz = floor(p)
+    v_int32x4 ip = v_floor(p);
+    v_float32x4 t = p - v_cvt_f32(ip);
+    float tx = t.get0();
+    t = v_reinterpret_as_f32(v_rotate_right<1>(v_reinterpret_as_u32(t)));
+    float ty = t.get0();
+    t = v_reinterpret_as_f32(v_rotate_right<1>(v_reinterpret_as_u32(t)));
+    float tz = t.get0();
+
+    int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
+    const Voxel* volData = volume.ptr<Voxel>();
+
+    int ix = ip.get0(); ip = v_rotate_right<1>(ip);
+    int iy = ip.get0(); ip = v_rotate_right<1>(ip);
+    int iz = ip.get0();
+
+    int coordBase = ix*xdim + iy*ydim + iz*zdim; 
+
+    const std::array<int, 6>& weights = volData[coordBase].semantic_weights;
+    int maxWeightIndex = 0;
+    int maxWeight = weights[0];
+
+    for (int i = 1; i < 6; i++)
+    {
+        int weight = weights[i];
+        if (weight > maxWeight)
+        {
+            maxWeight = weight;
+            maxWeightIndex = i;
+        }
+    }
+
+    return maxWeightIndex;
+}
+#else
+inline volumeType TSDFVolumeCPU::getVoxelClass(Point3f p) const
+{
+    int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
+
+    int ix = cvFloor(p.x);
+    int iy = cvFloor(p.y);
+    int iz = cvFloor(p.z);
+
+    float tx = p.x - ix;
+    float ty = p.y - iy;
+    float tz = p.z - iz;
+
+    int coordBase = ix * xdim + iy * ydim + iz * zdim;
+    const Voxel* volData = volume.ptr<Voxel>();
+
+    const std::array<int, 6>& weights = volData[coordBase].semantic_weights;
+    volumeType maxWeightIndex = 0;
+    int maxWeight = weights[0];
+
+    for (int i = 1; i < 6; i++)
+    {
+        int weight = weights[i];
+        if (weight > maxWeight)
+        {
+            maxWeight = weight;
+            maxWeightIndex = i;
+        }
+    }
+
+    return maxWeightIndex;
+}
+#endif
+
+
+// inline volumeType TSDFVolumeCPU::getVoxelClass(Point3f p) const
+// {
+//     int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
+
+//     int ix = cvFloor(p.x);
+//     int iy = cvFloor(p.y);
+//     int iz = cvFloor(p.z);
+
+//     float tx = p.x - ix;
+//     float ty = p.y - iy;
+//     float tz = p.z - iz;
+
+//     int coordBase = ix*xdim + iy*ydim + iz*zdim;
+//     const Voxel* volData = volume.ptr<Voxel>();
+
+//     //geet weights (its an array)= volData[coordBase].semantic_weights;
+//     float* weights = volData[coordBase].semantic_weights;
+//     // find max
+//     int max = 0;
+//     for(int i = 0 ; i < weights.size() ; ++i){
+//         if (weights[i] >max){
+//             max = i;
+//         }
+//     }
+ 
+//    return max;
+// }
+// #endif
+
+
 
 #if USE_INTRINSICS
 //gradientDeltaFactor is fixed at 1.0 of voxel size
@@ -836,11 +1057,12 @@ inline Point3f TSDFVolumeCPU::getNormalVoxel(Point3f p) const
 
 struct RaycastInvoker : ParallelLoopBody
 {
-    RaycastInvoker(Points& _points, Normals& _normals, Affine3f cameraPose,
+    RaycastInvoker(Points& _points, Normals& _normals, VoxelClass& _voxelClass, Affine3f cameraPose,
                    Intr intrinsics, const TSDFVolumeCPU& _volume) :
         ParallelLoopBody(),
         points(_points),
         normals(_normals),
+        voxelClass(_voxelClass),
         volume(_volume),
         tstep(volume.truncDist * volume.raycastStepFactor),
         // We do subtract voxel size to minimize checks after
@@ -884,6 +1106,7 @@ struct RaycastInvoker : ParallelLoopBody
         {
             ptype* ptsRow = points[y];
             ptype* nrmRow = normals[y];
+            int* semRow = voxelClass[y];
 
             for(int x = 0; x < points.cols; x++)
             {
@@ -891,7 +1114,8 @@ struct RaycastInvoker : ParallelLoopBody
 
                 v_float32x4 orig = camTrans;
 
-                // get direction through pixel in volume space:
+                // get direction through pixel in volume space:c
+
 
                 // 1. reproject (x, y) on projecting plane where z = 1.f
                 v_float32x4 planed = (v_float32x4((float)x, (float)y, 0.f, 0.f) - vcxy)*vfxy;
@@ -987,13 +1211,18 @@ struct RaycastInvoker : ParallelLoopBody
                                                                    volume.voxelSize,
                                                                    volume.voxelSize, 1.f),
                                                     volRot0, volRot1, volRot2, volTrans);
+
                             }
+                            semRow[x] = volume.getVoxelClass(pv); 
+
                         }
                     }
                 }
 
                 v_store((float*)(&ptsRow[x]), point);
                 v_store((float*)(&nrmRow[x]), normal);
+                voxelClass.at<int>(x,y) = semRow[x];
+
             }
         }
     }
@@ -1008,6 +1237,7 @@ struct RaycastInvoker : ParallelLoopBody
         {
             ptype* ptsRow = points[y];
             ptype* nrmRow = normals[y];
+            int* semRow = voxelClass[y];
 
             for(int x = 0; x < points.cols; x++)
             {
@@ -1087,19 +1317,23 @@ struct RaycastInvoker : ParallelLoopBody
                             Point3f pv = (orig + dir*ts);
                             Point3f nv = volume.getNormalVoxel(pv);
 
+
                             if(!isNaN(nv))
                             {
                                 //convert pv and nv to camera space
                                 normal = volRot * nv;
                                 // interpolation optimized a little
                                 point = vol2cam * (pv*volume.voxelSize);
+
                             }
+                            semRow[x] = volume.getVoxelClass(pv);
                         }
                     }
                 }
-
                 ptsRow[x] = toPtype(point);
                 nrmRow[x] = toPtype(normal);
+                voxelClass.at<int>(y, x) = semRow[x];
+
             }
         }
     }
@@ -1107,6 +1341,7 @@ struct RaycastInvoker : ParallelLoopBody
 
     Points& points;
     Normals& normals;
+    VoxelClass& voxelClass;
     const TSDFVolumeCPU& volume;
 
     const float tstep;
@@ -1121,19 +1356,28 @@ struct RaycastInvoker : ParallelLoopBody
 
 
 void TSDFVolumeCPU::raycast(cv::Affine3f cameraPose, Intr intrinsics, Size frameSize,
-                            cv::OutputArray _points, cv::OutputArray _normals) const
+                            cv::OutputArray _points, cv::OutputArray _normals, cv::OutputArray _voxelClass) const
 {
+    
+    std::cout<< "heyy1" << std::endl; 
     CV_TRACE_FUNCTION();
-
+std::cout<< "heyy2" << std::endl;
     CV_Assert(frameSize.area() > 0);
 
-    _points.create (frameSize, POINT_TYPE);
+    std::cout<<"hhhhhhh"<<std::endl;
+    std::cout<< frameSize << std::endl;
+
+    _points.create(frameSize, POINT_TYPE);
     _normals.create(frameSize, POINT_TYPE);
+    _voxelClass.create(frameSize, CV_32S);
 
-    Points points   =  _points.getMat();
+    std::cout<< "saaaaaaaaaaaaaaaaaaaa" << std::endl;
+    
+    Points points = _points.getMat();
     Normals normals = _normals.getMat();
-
-    RaycastInvoker ri(points, normals, cameraPose, intrinsics, *this);
+    VoxelClass voxelClass = _voxelClass.getMat();
+    
+    RaycastInvoker ri(points, normals, voxelClass, cameraPose, intrinsics, *this);
     const int nstripes = -1;
     parallel_for_(Range(0, points.rows), ri, nstripes);
     cv::Size s = volume.size();
@@ -1345,14 +1589,15 @@ public:
                   float _raycastStepFactor);
 
     virtual void integrate(InputArray _depth, const Semantic& _semantic, float depthFactor, cv::Affine3f cameraPose, cv::kinfu::Intr intrinsics) override;
-    virtual void raycast(cv::Affine3f cameraPose, cv::kinfu::Intr intrinsics, cv::Size frameSize,
-                         cv::OutputArray _points, cv::OutputArray _normals) const override;
+    virtual void raycast(cv::Affine3f cameraPose, Intr intrinsics, Size frameSize,
+                        cv::OutputArray _points, cv::OutputArray _normals, cv::OutputArray _voxelClass) const override;
 
     virtual void fetchPointsNormals(cv::OutputArray points, cv::OutputArray normals) const override;
     virtual void fetchNormals(cv::InputArray points, cv::OutputArray normals) const override;
 
     virtual void reset() override;
-
+    
+    
     // See zFirstMemOrder arg of parent class constructor
     // for the array layout info
     // Array elem is CV_32FC2, read as (float, int)
@@ -1378,8 +1623,9 @@ void TSDFVolumeGPU::reset()
 
     VoxelGPU empty;
     std::memset(&empty, 0, sizeof(VoxelGPU));
-    
     VecGPUT* v = reinterpret_cast<VecGPUT*>(&empty);
+
+    volume.setTo(_InputArray(v, 1));
 
     // volume.forEach<VecT>([](VecT& vv, const int* /* position */)
     // {
@@ -1391,8 +1637,6 @@ void TSDFVolumeGPU::reset()
     //     //v.semantic_weights = std::vector<float>(K, 0.0);
 
     // });
-
-    volume.setTo(_InputArray(v, 1));
 }
 
 
@@ -1405,7 +1649,6 @@ void TSDFVolumeGPU::integrate(InputArray _depth,  const Semantic& _semantic, flo
     UMat depth = _depth.getUMat();
     cv::Mat semanticMat = _semantic; 
     cv::UMat semantic = semanticMat.getUMat(cv::ACCESS_READ);
-    Voxel voxel;
 
     cv::String errorStr;
     cv::String name = "integrate";
@@ -1445,11 +1688,12 @@ void TSDFVolumeGPU::integrate(InputArray _depth,  const Semantic& _semantic, flo
 
     if(!k.run(2, globalSize, NULL, true))
         throw std::runtime_error("Failed to run kernel");
+
 }
 
 
 void TSDFVolumeGPU::raycast(cv::Affine3f cameraPose, Intr intrinsics, Size frameSize,
-                            cv::OutputArray _points, cv::OutputArray _normals) const
+                            cv::OutputArray _points, cv::OutputArray _normals,cv::OutputArray _voxelClass) const
 {
     CV_TRACE_FUNCTION();
 
@@ -1477,7 +1721,8 @@ void TSDFVolumeGPU::raycast(cv::Affine3f cameraPose, Intr intrinsics, Size frame
     Mat(cam2vol.matrix).copyTo(cam2volGpu);
     Mat(vol2cam.matrix).copyTo(vol2camGpu);
     Intr::Reprojector r = intrinsics.makeReprojector();
-    // We do subtract voxel size to minimize checks after
+    // We do subtract voxel size to minimize checks after    std::cout<< maxWeightIndex << std::endl;
+
     // Note: origin of volume coordinate is placed
     // in the center of voxel (0,0,0), not in the corner of the voxel!
     Vec4f boxMin, boxMax(volSize.x - voxelSize,
@@ -1684,12 +1929,12 @@ void TSDFVolumeGPU::fetchPointsNormals(OutputArray points, OutputArray normals) 
 cv::Ptr<TSDFVolume> makeTSDFVolume(Point3i _res,  float _voxelSize, cv::Affine3f _pose, float _truncDist, int _maxWeight,
                                    float _raycastStepFactor)
 {
-#ifdef HAVE_OPENCL
-    if(cv::ocl::useOpenCL()){
-        printf("Using GPU\n");
-        return cv::makePtr<TSDFVolumeGPU>(_res, _voxelSize, _pose, _truncDist, _maxWeight, _raycastStepFactor);
-    }
- #endif
+// #ifdef HAVE_OPENCL
+//     if(cv::ocl::useOpenCL()){
+//         printf("Using GPU\n");
+//         return cv::makePtr<TSDFVolumeGPU>(_res, _voxelSize, _pose, _truncDist, _maxWeight, _raycastStepFactor);
+//     }
+//  #endif
     cv::ocl::setUseOpenCL(true);
     printf("tried\n");
     printf("%d\n", cv::ocl::useOpenCL());

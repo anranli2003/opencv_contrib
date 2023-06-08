@@ -112,11 +112,14 @@ private:
 
     cv::Ptr<ICP> icp;
     cv::Ptr<TSDFVolume> volume;
-
+    
     int frameCounter;
     Affine3f pose;
     std::vector<T> pyrPoints;
     std::vector<T> pyrNormals;
+    std::vector<T> pyrClasses;
+
+    //VoxelClass VoxMat;
 };
 
 
@@ -127,7 +130,7 @@ KinFuImpl<T>::KinFuImpl(const Params &_params) :
     volume(makeTSDFVolume(params.volumeDims, params.voxelSize, params.volumePose,
                           params.tsdf_trunc_dist, params.tsdf_max_weight,
                           params.raycast_step_factor)),
-    pyrPoints(), pyrNormals()
+    pyrPoints(), pyrNormals(), pyrClasses()
 {
     reset();
 }
@@ -163,10 +166,11 @@ bool KinFuImpl<Mat>::update(InputArray _depth, const Semantic& _semantic)
     CV_Assert(!_depth.empty() && _depth.size() == params.frameSize);
 
     Mat depth;
+
     if(_depth.isUMat())
     {
         _depth.copyTo(depth);
-        return updateT(depth,_semantic);
+        return updateT(depth, _semantic);
     }
     else
     {
@@ -209,8 +213,8 @@ bool KinFuImpl<T>::updateT(const T& _depth, const Semantic& _semantic)
     // Get camera pose
     Matx44f cameraPose = pose.matrix;
 
-    std::vector<T> newPoints, newNormals;
-    makeFrameFromDepth(depth, newPoints, newNormals, params.intr,
+    std::vector<T> newPoints, newNormals, newClasses;
+    makeFrameFromDepth(depth, newPoints, newNormals, newClasses, params.intr,
                        params.pyramidLevels,
                        params.depthFactor,
                        params.bilateral_sigma_depth,
@@ -224,6 +228,7 @@ bool KinFuImpl<T>::updateT(const T& _depth, const Semantic& _semantic)
 
         pyrPoints  = newPoints;
         pyrNormals = newNormals;
+        pyrClasses = newClasses;
     }
     else
     {
@@ -233,24 +238,26 @@ bool KinFuImpl<T>::updateT(const T& _depth, const Semantic& _semantic)
             return false;
 
         pose = pose * affine;
-
         float rnorm = (float)cv::norm(affine.rvec());
         float tnorm = (float)cv::norm(affine.translation());
+
+
         // We do not integrate volume if camera does not move
         if((rnorm + tnorm)/2 >= params.tsdf_min_camera_movement)
-        {
+        { 
             // use depth instead of distance
             volume->integrate(depth, _semantic, params.depthFactor, pose, params.intr);
         }
-
+        
         T& points  = pyrPoints [0];
         T& normals = pyrNormals[0];
-        volume->raycast(pose, params.intr, params.frameSize, points, normals);
+        T& VoxMat = pyrClasses[0];
+        volume->raycast(pose, params.intr, params.frameSize, points, normals, VoxMat);
+
         // build a pyramid of points and normals
-        buildPyramidPointsNormals(points, normals, pyrPoints, pyrNormals,
+        buildPyramidPointsNormals(points, normals, pyrPoints, pyrNormals, 
                                   params.pyramidLevels);
     }
-
 
     frameCounter++;
     return true;
@@ -259,25 +266,24 @@ bool KinFuImpl<T>::updateT(const T& _depth, const Semantic& _semantic)
 
 template< typename T >
 void KinFuImpl<T>::render(OutputArray image, const Matx44f& _cameraPose) const
-{
+{ 
     CV_TRACE_FUNCTION();
 
     Affine3f cameraPose(_cameraPose);
-  
-    int label = 3;
-
+ 
+    int label = 3; //volume->maxIndexMat;
     const Affine3f id = Affine3f::Identity();
     if((cameraPose.rotation() == pose.rotation() && cameraPose.translation() == pose.translation()) ||
        (cameraPose.rotation() == id.rotation()   && cameraPose.translation() == id.translation()))
     {
-        renderPointsNormals(pyrPoints[0], pyrNormals[0], image, params.lightPose, label); // label
+        renderPointsNormals(pyrPoints[0], pyrNormals[0], pyrClasses[0], image, params.lightPose);
     }
     else
     {   
         printf("This happened");
-        T points, normals;
-        volume->raycast(cameraPose, params.intr, params.frameSize, points, normals);
-        renderPointsNormals(points, normals, image, params.lightPose, label); // label;
+        T points, normals, voxelClass;
+        volume->raycast(cameraPose, params.intr, params.frameSize, points, normals, voxelClass);
+        renderPointsNormals(points, normals, voxelClass, image, params.lightPose); 
     }
 }
 

@@ -177,15 +177,15 @@ __kernel void integrate(__global const char* depthptr,
             // Update TSDF
             value = (value * weight + tsdf) / (weight + 1);
             weight = min(weight + 1, maxWeight);
-            if(m >= 0){
-              semantic_weights[m]+= 1;
+            if(m >= 0 && m <=56){
+              semantic_weights[0]+= 1;
             }
+
 
             voxel.v = value;
             voxel.weight = as_float(weight);
             // voxel.s2 = semantic_weights
             volumeptr[volIdx] = voxel;
-
 
         }
     }

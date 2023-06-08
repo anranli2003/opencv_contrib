@@ -496,6 +496,8 @@ namespace rgbd
     CV_PROP std::vector<Mat> pyramidTexturedMask;
 
     CV_PROP std::vector<Mat> pyramidNormals;
+    CV_PROP std::vector<Mat> pyramidClass;
+
     CV_PROP std::vector<Mat> pyramidNormalsMask;
   };
 

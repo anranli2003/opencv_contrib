@@ -56,9 +56,14 @@ public:
          };
 };
 
+
 namespace kinfu {
 
 typedef cv::Vec4f ptype;
+
+typedef int VoxelClassType; 
+typedef cv::Mat_<VoxelClassType> VoxelClass;
+
 inline cv::Vec3f fromPtype(const ptype& x)
 {
     return cv::Vec3f(x[0], x[1], x[2]);
@@ -72,21 +77,29 @@ inline ptype toPtype(const cv::Vec3f& x)
 enum
 {
     DEPTH_TYPE = DataType<depthType>::type,
-    POINT_TYPE = DataType<ptype    >::type
+    POINT_TYPE = DataType<ptype    >::type,
 };
-
 typedef cv::Mat_< ptype > Points;
 typedef Points Normals;
-
 typedef cv::Mat_< depthType > Depth;
 
-void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, cv::Affine3f lightPose, int max_index); //int max_index
-void makeFrameFromDepth(InputArray depth, OutputArray pyrPoints, OutputArray pyrNormals,
+typedef int VoxelClassType; 
+typedef cv::Mat_<VoxelClassType> VoxelClass;
+
+
+void renderPointsNormals(InputArray _points, InputArray _normals, InputArray _voxelClass, OutputArray image, Affine3f lightPose);
+void makeFrameFromDepth(InputArray _depth, 
+                        OutputArray pyrPoints, OutputArray pyrNormals, OutputArray pyrClasses,
                         const Intr intr, int levels, float depthFactor,
                         float sigmaDepth, float sigmaSpatial, int kernelSize);
-void buildPyramidPointsNormals(InputArray _points, InputArray _normals,
+void makeFrameFromDepth(InputArray _depth, 
+                        OutputArray pyrPoints, OutputArray pyrNormals,
+                        const Intr intr, int levels, float depthFactor,
+                        float sigmaDepth, float sigmaSpatial, int kernelSize);
+void buildPyramidPointsNormals(InputArray _points, InputArray _normals, 
                                OutputArrayOfArrays pyrPoints, OutputArrayOfArrays pyrNormals,
                                int levels);
+
 
 } // namespace kinfu
 } // namespace cv
