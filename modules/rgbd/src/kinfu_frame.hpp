@@ -61,8 +61,7 @@ namespace kinfu {
 
 typedef cv::Vec4f ptype;
 
-typedef int VoxelClassType; 
-typedef cv::Mat_<VoxelClassType> VoxelClass;
+typedef int VoxelClassType;
 
 inline cv::Vec3f fromPtype(const ptype& x)
 {
@@ -78,14 +77,12 @@ enum
 {
     DEPTH_TYPE = DataType<depthType>::type,
     POINT_TYPE = DataType<ptype    >::type,
+    CLASS_TYPE = DataType<VoxelClassType>::type,
 };
 typedef cv::Mat_< ptype > Points;
 typedef Points Normals;
 typedef cv::Mat_< depthType > Depth;
-
-typedef int VoxelClassType; 
 typedef cv::Mat_<VoxelClassType> VoxelClass;
-
 
 void renderPointsNormals(InputArray _points, InputArray _normals, InputArray _voxelClass, OutputArray image, Affine3f lightPose);
 void makeFrameFromDepth(InputArray _depth, 

@@ -447,30 +447,24 @@ struct IntegrateInvoker : ParallelLoopBody
 
 
                         //update semantic vector
-                        if(m >= 0 && m < 10){
+                        if(m = 40){
                             voxel.semantic_weights[0]+=1;
                         }                  
-                        if(m >= 10 && m < 20){
+                        if(m = 24){
                             voxel.semantic_weights[1]+=1;
                         } 
-                        if(m >= 20 && m < 30){
+                        if(m = 66){
                             voxel.semantic_weights[2]+=1;
                         } 
-                        if(m >= 30 && m < 40){
+                        if(m = 67){
                             voxel.semantic_weights[3]+=1;
                         } 
-                        if(m >= 40 && m < 50){
+                        if(m = 48){
                             voxel.semantic_weights[4]+=1;
                         }
-                        if(m >= 50 && m < 57){
+                        if(m = 18){
                             voxel.semantic_weights[5]+=1;
                         }  
-                        int maxidx = 0;
-                        for (int i = 0; i < voxel.semantic_weights.size(); ++i) {
-                            if (voxel.semantic_weights[i] > voxel.semantic_weights[maxidx]) {
-                                maxidx = i;
-                            }
-                        }
                         //volume.maxIndexMat.at<int>(y, x) = maxidx;
 
                         // for (int y = 0; y < volume.maxIndexMat.rows; y++) {
@@ -1221,7 +1215,7 @@ struct RaycastInvoker : ParallelLoopBody
 
                 v_store((float*)(&ptsRow[x]), point);
                 v_store((float*)(&nrmRow[x]), normal);
-                voxelClass.at<int>(x,y) = semRow[x];
+                voxelClass.at<int>(y,x) = semRow[x];
 
             }
         }
@@ -1359,19 +1353,12 @@ void TSDFVolumeCPU::raycast(cv::Affine3f cameraPose, Intr intrinsics, Size frame
                             cv::OutputArray _points, cv::OutputArray _normals, cv::OutputArray _voxelClass) const
 {
     
-    std::cout<< "heyy1" << std::endl; 
     CV_TRACE_FUNCTION();
-std::cout<< "heyy2" << std::endl;
     CV_Assert(frameSize.area() > 0);
-
-    std::cout<<"hhhhhhh"<<std::endl;
-    std::cout<< frameSize << std::endl;
 
     _points.create(frameSize, POINT_TYPE);
     _normals.create(frameSize, POINT_TYPE);
     _voxelClass.create(frameSize, CV_32S);
-
-    std::cout<< "saaaaaaaaaaaaaaaaaaaa" << std::endl;
     
     Points points = _points.getMat();
     Normals normals = _normals.getMat();

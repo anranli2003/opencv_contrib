@@ -61,19 +61,19 @@ struct RenderInvoker : ParallelLoopBody
             Vec4b* imgRow = img[y];
             const ptype* ptsRow = points[y];
             const ptype* nrmRow = normals[y];
-            const int* idxRow = index[y]; // Added line to access index matrix
+            const VoxelClassType* idxRow = index[y]; // Added line to access index matrix
 
             for(int x = 0; x < sz.width; x++)
             {
                 Point3f p = fromPtype(ptsRow[x]);
                 Point3f n = fromPtype(nrmRow[x]);
-                int max_index = static_cast<int>(idxRow[x]); // added this for max
+                
+                VoxelClassType max_index = idxRow[x]; // added this for max
                 Vec4b color;
 
                 if(isNaN(p))
                 {
                     color = Vec4b(0, 18, 0, 0);
-//color = Vec4b(0, 18, 0, 0);
 
                 }
                 else
@@ -657,9 +657,9 @@ static bool ocl_makeFrameFromDepth(const UMat depth, OutputArrayOfArrays points,
     UMat scaled = smooth;
     Size sz = smooth.size();
     // First do the classes
-    classes.create(1, 1, POINT_TYPE);
+    classes.create(1, 1, CLASS_TYPE);
     UMat& c = classes.getUMatRef(0);
-    c.create(sz, POINT_TYPE);
+    c.create(sz, CLASS_TYPE);
     // Do the rest
     points.create(levels, 1, POINT_TYPE);
     normals.create(levels, 1, POINT_TYPE);
@@ -833,8 +833,8 @@ void makeFrameFromDepth(InputArray _depth,
     //////////////////// end lazy section
 
     // First create the classes output since we only care to have one level
-    pyrClasses.create(1, 1, POINT_TYPE);
-    pyrClasses.create(sz, POINT_TYPE, 1);
+    pyrClasses.create(1, 1, CLASS_TYPE);
+    pyrClasses.create(sz, CLASS_TYPE, 1);
 }
 
 

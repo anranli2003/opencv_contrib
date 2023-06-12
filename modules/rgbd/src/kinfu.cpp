@@ -219,7 +219,7 @@ bool KinFuImpl<T>::updateT(const T& _depth, const Semantic& _semantic)
                        params.depthFactor,
                        params.bilateral_sigma_depth,
                        params.bilateral_sigma_spatial,
-                       params.bilateral_kernel_size);
+                       params.bilateral_kernel_size); 
 
     if(frameCounter == 0)
     {
