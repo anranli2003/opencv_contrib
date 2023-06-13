@@ -67,7 +67,6 @@ struct RenderInvoker : ParallelLoopBody
             {
                 Point3f p = fromPtype(ptsRow[x]);
                 Point3f n = fromPtype(nrmRow[x]);
-                
                 VoxelClassType max_index = idxRow[x]; // added this for max
                 Vec4b color;
 

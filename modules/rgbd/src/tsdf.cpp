@@ -406,7 +406,6 @@ struct IntegrateInvoker : ParallelLoopBody
 
                     //Get the nearest neighbor class at the project point
                     maskType m;
-                    //int m;
                     {
                         const v_float32x4& pt1 = projected;
                         // check coords >= 0 and < imgSize
@@ -447,26 +446,25 @@ struct IntegrateInvoker : ParallelLoopBody
 
 
                         //update semantic vector
-                        if(m = 40){
+                        if(m >= 0 && m < 10){
                             voxel.semantic_weights[0]+=1;
                         }                  
-                        if(m = 24){
+                        if(m >= 10 && m < 20){
                             voxel.semantic_weights[1]+=1;
                         } 
-                        if(m = 66){
+                        if(m >= 20 && m < 30){
                             voxel.semantic_weights[2]+=1;
                         } 
-                        if(m = 67){
+                        if(m >= 30 && m < 40){
                             voxel.semantic_weights[3]+=1;
                         } 
-                        if(m = 48){
+                        if(m >= 40 && m < 50){
                             voxel.semantic_weights[4]+=1;
                         }
-                        if(m = 18){
+                        if(m >= 50 && m < 57){
                             voxel.semantic_weights[5]+=1;
                         }  
-                        //volume.maxIndexMat.at<int>(y, x) = maxidx;
-
+                        
                         // for (int y = 0; y < volume.maxIndexMat.rows; y++) {
                         //     for (int x = 0; x < volume.maxIndexMat.cols; x++) {
                         //         int value = volume.maxIndexMat.at<int>(y, x);
@@ -649,9 +647,6 @@ struct IntegrateInvoker : ParallelLoopBody
                         if(m >= 50 && m < 57){
                             voxel.semantic_weights[5]+=1;
                         }  
-                        volume.maxIndexMat.at<int>(y, x) = maxidx;
-
-
                     }
                 }
             }
@@ -903,37 +898,6 @@ inline volumeType TSDFVolumeCPU::getVoxelClass(Point3f p) const
 #endif
 
 
-// inline volumeType TSDFVolumeCPU::getVoxelClass(Point3f p) const
-// {
-//     int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
-
-//     int ix = cvFloor(p.x);
-//     int iy = cvFloor(p.y);
-//     int iz = cvFloor(p.z);
-
-//     float tx = p.x - ix;
-//     float ty = p.y - iy;
-//     float tz = p.z - iz;
-
-//     int coordBase = ix*xdim + iy*ydim + iz*zdim;
-//     const Voxel* volData = volume.ptr<Voxel>();
-
-//     //geet weights (its an array)= volData[coordBase].semantic_weights;
-//     float* weights = volData[coordBase].semantic_weights;
-//     // find max
-//     int max = 0;
-//     for(int i = 0 ; i < weights.size() ; ++i){
-//         if (weights[i] >max){
-//             max = i;
-//         }
-//     }
- 
-//    return max;
-// }
-// #endif
-
-
-
 #if USE_INTRINSICS
 //gradientDeltaFactor is fixed at 1.0 of voxel size
 inline Point3f TSDFVolumeCPU::getNormalVoxel(Point3f _p) const
@@ -1100,7 +1064,7 @@ struct RaycastInvoker : ParallelLoopBody
         {
             ptype* ptsRow = points[y];
             ptype* nrmRow = normals[y];
-            int* semRow = voxelClass[y];
+            VoxelClassType* semRow = voxelClass[y];
 
             for(int x = 0; x < points.cols; x++)
             {
@@ -1208,7 +1172,6 @@ struct RaycastInvoker : ParallelLoopBody
 
                             }
                             semRow[x] = volume.getVoxelClass(pv); 
-
                         }
                     }
                 }
