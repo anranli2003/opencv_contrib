@@ -7,8 +7,11 @@
 #include "precomp.hpp"
 #include "tsdf.hpp"
 #include "opencl_kernels_rgbd.hpp"
+#include <iostream>
 #include <vector>
+#include <algorithm>
 #include <cstring>
+
 
 const int K = 57;
 
@@ -273,7 +276,7 @@ static inline depthType bilinearDepth(const Depth& m, cv::Point2f pt)
 
 
 struct IntegrateInvoker : ParallelLoopBody
-{
+{                        
     IntegrateInvoker(TSDFVolumeCPU& _volume, const Depth& _depth, const Semantic& _semantic, Intr intrinsics, cv::Affine3f cameraPose,
                      float depthFactor) :
         ParallelLoopBody(),
@@ -299,6 +302,9 @@ struct IntegrateInvoker : ParallelLoopBody
         v_float32x4 zStep(zStepPt.x, zStepPt.y, zStepPt.z, 0);
         v_float32x4 vfxy(proj.fx, proj.fy, 0.f, 0.f), vcxy(proj.cx, proj.cy, 0.f, 0.f);
         const v_float32x4 upLimits = v_cvt_f32(v_int32x4(depth.cols-1, depth.rows-1, 0, 0));
+
+    std::vector<int> mVector;
+
 
         for(int x = range.start; x < range.end; x++)
         {
@@ -375,6 +381,7 @@ struct IntegrateInvoker : ParallelLoopBody
                         ipshift = v_rotate_right<1>(ipshift);
                         int yi = ipshift.get0();
 
+
                         const depthType* row0 = depth[yi+0];
                         const depthType* row1 = depth[yi+1];
 
@@ -403,7 +410,30 @@ struct IntegrateInvoker : ParallelLoopBody
                         else
                             continue;
                     }
+                    // maskType m;
+                    // {
+                    //     const v_float32x4& pt1 = projected;
+                    //     // Check if coordinates are within image bounds
+                    //     v_uint32x4 limits = v_reinterpret_as_u32(pt1 < v_setzero_f32()) |
+                    //                         v_reinterpret_as_u32(pt1 >= upLimits);
+                    //     limits = limits | v_rotate_right<1>(limits);
+                    //     if (v_check_any(limits))
+                    //         continue;
 
+                    //     // Compute integer indices
+                    //     v_int32x4 ip1 = v_round(pt1);
+                    //     v_int32x4 ipshift1 = ip1;
+                    //     int xi1 = ipshift1.get0();
+                    //     ipshift1 = v_rotate_right<1>(ipshift1);
+                    //     int yi1 = ipshift1.get0();
+
+                        
+                    //     m = semantic.at<uchar>(yi1,xi1);
+                        
+                    //     if (std::find(mVector.begin(), mVector.end(), m) == mVector.end()) {
+                    //         mVector.push_back(m);
+                    //     }
+                    // }
                     //Get the nearest neighbor class at the project point
                     maskType m;
                     {
@@ -417,9 +447,19 @@ struct IntegrateInvoker : ParallelLoopBody
 
                         // xi, yi = floor(pt)
                         v_int32x4 ip1 = v_round(pt1);
+                        v_int32x4 ipshift1 = ip1;
+                        int xi = ipshift1.get0();
+                        ipshift1 = v_rotate_right<1>(ipshift1);
+                        int yi = ipshift1.get0();
+                        // std::cout<< yi <<std::endl;
+                        // std::cout<< xi <<std::endl;
 
                         //get the value from the mask at ip mask.getvalueatpoint(ip)
-                        m = semantic.at<uchar>(ip1.val[1], ip1.val[0]);
+                        m = semantic.at<uchar>(yi, xi);
+                   
+                        //if (std::find(mVector.begin(), mVector.end(), m) == mVector.end()) {
+                            //mVector.push_back(m);
+                        //}
                     }
 
                     // norm(camPixVec) produces double which is too slow
@@ -474,11 +514,13 @@ struct IntegrateInvoker : ParallelLoopBody
                         // }
                         
                         //std::cout << "m =  " << m << std::endl;
+
                         // for(int i = 0 ; i < 6 ; ++i){
                         //     if(voxel.semantic_weights[i]>1){
+
                         //     std::cout << i<< "th element: " << voxel.semantic_weights[i] << std::endl;
                         //     }
-                        //}
+                        // }
                         //std::cout << "max index =  " << maxidx << std::endl;
 
 
@@ -486,6 +528,10 @@ struct IntegrateInvoker : ParallelLoopBody
                 }
             }
         }
+
+        // for (int num : mVector) {
+        //     std::cout << num << " ";
+        // }
         // Gaussian Convolution
         // printf("Doing Gaussian Convolution...");
         // for(int x = range.start + 1; x < range.end - 1; x++){
