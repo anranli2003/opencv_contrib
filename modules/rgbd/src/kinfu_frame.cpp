@@ -833,7 +833,8 @@ void makeFrameFromDepth(InputArray _depth,
 
     // First create the classes output since we only care to have one level
     pyrClasses.create(1, 1, CLASS_TYPE);
-    pyrClasses.create(sz, CLASS_TYPE, 1);
+    pyrClasses.create(sz, CLASS_TYPE, 0);
+
 }
 
 
