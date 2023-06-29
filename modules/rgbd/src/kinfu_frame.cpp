@@ -89,10 +89,11 @@ struct RenderInvoker : ParallelLoopBody
                     Point3f r = normalize(Vec3f(2.f*n*n.dot(l) - l));
 
                     std::vector<cv::Vec3b> colors = {
+                        cv::Vec3b(255, 255, 255),
                         cv::Vec3b(255, 0, 0),     // 0 red
                         cv::Vec3b(0, 255, 0),     // 1 green
-                        cv::Vec3b(0, 0, 255),     // 2 blue
-                        cv::Vec3b(255, 255, 0),   // 3 yellow
+                        //cv::Vec3b(64,128,128),    // 2 blue
+                        cv::Vec3b(255, 100, 0),   // 3 yellow
                         cv::Vec3b(255, 0, 255),   // 4 magenta
                         cv::Vec3b(0, 255, 255),   // 5 cyan
                         cv::Vec3b(200, 0, 0),     // 6 maroon
@@ -102,7 +103,7 @@ struct RenderInvoker : ParallelLoopBody
                         cv::Vec3b(128, 0, 128),   // 10 purple
                         cv::Vec3b(0, 128, 128),   // 11 teal
                         cv::Vec3b(255, 128, 0),   // 12 orange
-                        cv::Vec3b(255, 0, 128),   // 13 pink
+                        cv::Vec3b(0, 255, 255),   // 13 pink
                         cv::Vec3b(0, 255, 128),   // 14 light green
                         cv::Vec3b(128, 255, 0),   // 15 lime
                         cv::Vec3b(128, 0, 255),   // 16 violet
@@ -115,17 +116,17 @@ struct RenderInvoker : ParallelLoopBody
                         cv::Vec3b(128, 255, 255), // 23 light cyan
                         cv::Vec3b(192, 0, 0),     // 24 dark red
                         cv::Vec3b(0, 192, 0),     // 25 medium green
-                        cv::Vec3b(0, 0, 192),     // 26 dark blue
+                        cv::Vec3b(255,255,0),     // 26 dark blue
                         cv::Vec3b(192, 192, 0),   // 27 dark yellow
                         cv::Vec3b(192, 0, 192),   // 28 dark magenta
-                        cv::Vec3b(0, 192, 192),   // 29 dark cyan
+                        cv::Vec3b(0, 255, 0),     // 29 dark cyan
                         cv::Vec3b(128, 64, 0),    // 30 brown
                         cv::Vec3b(64, 128, 0),    // 31 olive green
                         cv::Vec3b(0, 64, 128),    // 32 dark indigo
-                        cv::Vec3b(128, 64, 128),  // 33 medium purple
-                        cv::Vec3b(64, 128, 128),  // 34 medium aqua
+                        cv::Vec3b(255, 255, 0),   // 33 medium purple
+                        cv::Vec3b(0, 0, 255),     // 34 medium aqua
                         cv::Vec3b(128, 128, 64),  // 35 khaki
-                        cv::Vec3b(192, 64, 0),    // 36 dark orange
+                        cv::Vec3b(255, 30, 122),  // 36 dark orange
                         cv::Vec3b(255, 255, 255), // 37
                         cv::Vec3b(160, 10, 0),    // 38
                         cv::Vec3b(100, 0, 8),     // 39
@@ -141,7 +142,7 @@ struct RenderInvoker : ParallelLoopBody
                         cv::Vec3b(165, 80, 92),   // 49
                         cv::Vec3b(0, 60, 0),      // 50
                         cv::Vec3b(30, 0, 109),    // 51
-                        cv::Vec3b(99, 199, 255),  // 52 
+                        cv::Vec3b(255, 255, 0),   // 52 
                         cv::Vec3b(177, 177, 177), // 53
                         cv::Vec3b(11, 255, 30),   // 54
                         cv::Vec3b(133, 31, 63),   // 55
@@ -162,7 +163,7 @@ struct RenderInvoker : ParallelLoopBody
                     uchar ir = (uchar)((Ax*Ka*Dx + Lx*Kd*Sx*max(0.f, n.dot(l)) +
                                          Lx*Ks*Sx*specPow<sp>(max(0.f, r.dot(v))))*255.f);
 
-                    color = Vec4b(ib*colorVec[2],ig*colorVec[1], ir*colorVec[0], 0);
+                    color = Vec4b(ir*colorVec[0],ig*colorVec[1], ib*colorVec[2], 0);
                 }
 
                 imgRow[x] = color;

@@ -13,7 +13,7 @@
 #include <cstring>
 
 
-const int K = 57;
+const int K = 43;
 
 
 namespace cv {
@@ -28,7 +28,7 @@ struct Voxel
 {
     volumeType v;
     int weight;
-    std::array<int,6> semantic_weights;
+    std::array<int,K> semantic_weights;
 };
 
 typedef Vec<uchar, sizeof(Voxel)> VecT;
@@ -457,9 +457,9 @@ struct IntegrateInvoker : ParallelLoopBody
                         //get the value from the mask at ip mask.getvalueatpoint(ip)
                         m = semantic.at<uchar>(yi, xi);
                    
-                        //if (std::find(mVector.begin(), mVector.end(), m) == mVector.end()) {
-                            //mVector.push_back(m);
-                        //}
+                        // if (std::find(mVector.begin(), mVector.end(), m) == mVector.end()) {
+                        //     mVector.push_back(m);
+                        // }
                     }
 
                     // norm(camPixVec) produces double which is too slow
@@ -486,24 +486,26 @@ struct IntegrateInvoker : ParallelLoopBody
 
 
                         //update semantic vector
-                        if(m >= 0 && m < 10){
-                            voxel.semantic_weights[0]+=1;
-                        }                  
-                        if(m >= 10 && m < 20){
-                            voxel.semantic_weights[1]+=1;
-                        } 
-                        if(m >= 20 && m < 30){
-                            voxel.semantic_weights[2]+=1;
-                        } 
-                        if(m >= 30 && m < 40){
-                            voxel.semantic_weights[3]+=1;
-                        } 
-                        if(m >= 40 && m < 50){
-                            voxel.semantic_weights[4]+=1;
-                        }
-                        if(m >= 50 && m < 57){
-                            voxel.semantic_weights[5]+=1;
-                        }  
+                        voxel.semantic_weights[m]+=1;
+
+                        // if(m >= 0 && m < 10){
+                        //     voxel.semantic_weights[0]+=1;
+                        // }                  
+                        // if(m >= 10 && m < 20){
+                        //     voxel.semantic_weights[1]+=1;
+                        // } 
+                        // if(m >= 20 && m < 30){
+                        //     voxel.semantic_weights[2]+=1;
+                        // } 
+                        // if(m >= 30 && m < 40){
+                        //     voxel.semantic_weights[3]+=1;
+                        // } 
+                        // if(m >= 40 && m < 50){
+                        //     voxel.semantic_weights[4]+=1;
+                        // }
+                        // if(m >= 50 && m < 57){
+                        //     voxel.semantic_weights[5]+=1;
+                        // }  
                         
                         // for (int y = 0; y < volume.maxIndexMat.rows; y++) {
                         //     for (int x = 0; x < volume.maxIndexMat.cols; x++) {
@@ -673,26 +675,26 @@ struct IntegrateInvoker : ParallelLoopBody
                         weight = min(weight + 1, volume.maxWeight);
  
                         //update semantic vector 
-                        //voxel.semantic_weights[m]+=1;
+                        voxel.semantic_weights[m]+=1;
 
-                        if(m >= 0 && m < 10){
-                            voxel.semantic_weights[0]+=1;
-                        }                  
-                        if(m >= 10 && m < 20){
-                            voxel.semantic_weights[1]+=1;
-                        } 
-                        if(m >= 20 && m < 30){
-                            voxel.semantic_weights[2]+=1;
-                        } 
-                        if(m >= 30 && m < 40){
-                            voxel.semantic_weights[3]+=1;
-                        } 
-                        if(m >= 40 && m < 50){
-                            voxel.semantic_weights[4]+=1;
-                        }
-                        if(m >= 50 && m < 57){
-                            voxel.semantic_weights[5]+=1;
-                        }  
+                        // if(m >= 0 && m < 10){
+                        //     voxel.semantic_weights[0]+=1;
+                        // }                  
+                        // if(m >= 10 && m < 20){
+                        //     voxel.semantic_weights[1]+=1;
+                        // } 
+                        // if(m >= 20 && m < 30){
+                        //     voxel.semantic_weights[2]+=1;
+                        // } 
+                        // if(m >= 30 && m < 40){
+                        //     voxel.semantic_weights[3]+=1;
+                        // } 
+                        // if(m >= 40 && m < 50){
+                        //     voxel.semantic_weights[4]+=1;
+                        // }
+                        // if(m >= 50 && m < 57){
+                        //     voxel.semantic_weights[5]+=1;
+                        // }  
                     }
                 }
             }
@@ -893,11 +895,11 @@ inline volumeType TSDFVolumeCPU::getVoxelClass(const v_float32x4& p) const
 
     int coordBase = ix*xdim + iy*ydim + iz*zdim; 
 
-    const std::array<int, 6>& weights = volData[coordBase].semantic_weights;
+    const std::array<int, K>& weights = volData[coordBase].semantic_weights;
     int maxWeightIndex = 0;
     int maxWeight = weights[0];
 
-    for (int i = 1; i < 6; i++)
+    for (int i = 1; i < K; i++)
     {
         int weight = weights[i];
         if (weight > maxWeight)
@@ -907,6 +909,10 @@ inline volumeType TSDFVolumeCPU::getVoxelClass(const v_float32x4& p) const
         }
     }
 
+    // for(int i = 0 ; i < weights.size() ; ++i){
+    //     std::cout<< i<<"th element" << std::endl;
+    //     std::cout<< weights[i] <<std::endl;
+    // }
     return maxWeightIndex;
 }
 #else
@@ -925,11 +931,11 @@ inline volumeType TSDFVolumeCPU::getVoxelClass(Point3f p) const
     int coordBase = ix * xdim + iy * ydim + iz * zdim;
     const Voxel* volData = volume.ptr<Voxel>();
 
-    const std::array<int, 6>& weights = volData[coordBase].semantic_weights;
+    const std::array<int, K>& weights = volData[coordBase].semantic_weights;
     volumeType maxWeightIndex = 0;
     int maxWeight = weights[0];
 
-    for (int i = 1; i < 6; i++)
+    for (int i = 1; i < K; i++)
     {
         int weight = weights[i];
         if (weight > maxWeight)
